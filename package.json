@@ -1,0 +1,1 @@
+{"name":"sugar-painting","version":"1.2.0","private":true,"type":"module","scripts":{"start":"node serve.mjs","build":"node build.mjs","check":"node --check src/main.js && node --check src/patterns.js && node --check src/sugar-layer.js && node --check src/pour.js","verify":"node verify-flow.mjs && node verify.mjs --offline"}}

@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+const root=path.dirname(fileURLToPath(import.meta.url));
+const require=createRequire(path.resolve(root,'../su7-ultra-product/vendor/teardown/package.json'));
+const esbuild=require('esbuild');
+const result=await esbuild.build({entryPoints:[path.join(root,'src/main.js')],bundle:true,write:false,minify:true,format:'iife',platform:'browser',target:'es2022',alias:{'three/addons':path.join(root,'vendor'),'three':path.join(root,'vendor/three.module.js')},legalComments:'inline'});
+const css=fs.readFileSync(path.join(root,'tokens.css'),'utf8')+'\n'+fs.readFileSync(path.join(root,'style.css'),'utf8').replace(/^@import.*$/gm,'');
+const js=result.outputFiles[0].text.replace(/<\/script/gi,'<\\/script');
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace('<link rel="stylesheet" href="./style.css" />',()=>`<style>${css}</style>`).replace(/\s*<script type="importmap">.*?<\/script>/s,'').replace('<script type="module" src="./src/main.js"></script>',()=>`<script>${js}</script>`);
+const target=path.join(root,'糖画铺.html');fs.writeFileSync(target,html);console.log(`已生成独立页面：${target} (${Math.round(Buffer.byteLength(html)/1024)} KB)`);
