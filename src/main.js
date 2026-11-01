@@ -3,12 +3,13 @@ import { OrbitControls } from 'three/addons/OrbitControls.js';
 import { patterns } from './patterns.js';
 import { SugarLayer } from './sugar-layer.js';
 import { SugarPour } from './pour.js';
+import { TemplateGuide } from './template-guide.js';
 
 const $ = (id) => document.getElementById(id);
 const container = $('scene');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const state = {mode:'watch', pattern:0, strokes:[], progress:1, playing:false, paused:false, speed:1, thickness:.04, drawing:false, draining:false, drawPoints:[], draft:null, needsRender:true, view:'angle', hasArtwork:true};
-let renderer, scene, camera, controls, sugar, spoon, stick, sugarMaterial, environment, sugarLayer, pour;
+const state = {mode:'watch', pattern:0, templatePattern:0, templateVisible:true, templateStrokes:{}, strokes:[], progress:1, playing:false, paused:false, speed:1, thickness:.04, drawing:false, draining:false, drawPoints:[], draft:null, needsRender:true, view:'angle', hasArtwork:true};
+let renderer, scene, camera, controls, sugar, spoon, stick, sugarMaterial, environment, sugarLayer, pour, templateGuide;
 let toastTimer, lastTime = 0, cameraMove = null, pouringPoint = new THREE.Vector3();
 let totalLength = 1, strokeData = [], strokeCursor = 0;
 let timeline=[],playTime=0,playDuration=1,liveDeposits=[],drawCommands=[],drawStart=0,drawStop=0;
@@ -117,7 +118,7 @@ function makeScene() {
   rod(v(5.2,.27,-2.5),v(5.8,1.15,-3.2),.035,bamboo);
   sugarMaterial=new THREE.MeshPhysicalMaterial({color:'#fffaf1',metalness:0,roughness:.07,transmission:1,thickness:.07,ior:1.49,attenuationColor:new THREE.Color('#f6ad35'),attenuationDistance:.052,envMapIntensity:1.25});
   sugar=new THREE.Group();scene.add(sugar);
-  sugarLayer=new SugarLayer(scene);sugarLayer.attachMarble(marbleMaterial);
+  sugarLayer=new SugarLayer(scene);templateGuide=new TemplateGuide();sugarLayer.attachMarble(marbleMaterial,templateGuide);
   stick=new THREE.Group();scene.add(stick);
   spoon=new THREE.Group();scene.add(spoon);
   const profile=[[0,0],[.10,.012],[.22,.07],[.32,.18],[.35,.26],[.35,.29],[.32,.30],[.29,.26],[.26,.18],[.18,.12],[0,.10]].map(p=>new THREE.Vector2(...p));
@@ -137,7 +138,7 @@ function makeScene() {
 function resize() {
   if(!renderer)return;const w=container.clientWidth,h=container.clientHeight;if(!w||!h)return;
   camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);state.needsRender=true;
-  if(!state.drawing&&controls&&!['detail','pour'].includes(state.view)){const distance=camera.position.distanceTo(controls.target);const minFit=Math.max(17.8,18.5/(w/h));if(distance<minFit)camera.position.sub(controls.target).setLength(minFit).add(controls.target);}
+  if(!state.drawing&&controls&&!['detail','pour'].includes(state.view)){const distance=camera.position.distanceTo(controls.target);const top=state.view==='top';const minFit=Math.max(top?15.5:17.8,(top?15.8:18.5)/(w/h));if(distance<minFit)camera.position.sub(controls.target).setLength(minFit).add(controls.target);}
 }
 function disposeGroup(group) {
   while(group.children.length){const child=group.children.pop();child.parent=null;child.geometry?.dispose();if(child.material&&child.material!==sugarMaterial)child.material.dispose();}
@@ -185,6 +186,23 @@ function setPattern(index,animate=true) {
   document.querySelectorAll('.pattern').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));
   renderArtwork(animate&&!reducedMotion);
 }
+function saveDrawingWorkspace() {
+  if(state.mode==='draw')state.ownStrokes=state.strokes;
+  if(state.mode==='template')state.templateStrokes[state.templatePattern]=state.strokes;
+}
+function updatePatternSelection() {
+  const index=state.mode==='template'?state.templatePattern:state.pattern;
+  document.querySelectorAll('.pattern').forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));
+}
+function setTemplate(index) {
+  if(state.drawing||state.draining)finishStroke(true);
+  saveDrawingWorkspace();state.templatePattern=index;
+  state.strokes=state.templateStrokes[index]||[];
+  templateGuide.setPattern(patterns[index]);templateGuide.setVisible(state.templateVisible);
+  $('scene-title').textContent=`描一幅${patterns[index].name}`;
+  $('scene-description').textContent='沿着淡色印记，慢慢落糖。';
+  updatePatternSelection();renderArtwork();
+}
 function updateProgress() {
   $('playback').hidden=!state.playing;
   $('progress').style.transform=`scaleX(${state.progress})`;
@@ -221,7 +239,7 @@ function advancePlayback(dt) {
 }
 function updateButtons() {
   $('play').disabled=!state.hasArtwork;
-  $('play').querySelector('span').textContent=state.mode==='draw'?'看我的浇糖过程':'再看一次浇糖';
+  $('play').querySelector('span').textContent=state.mode!=='watch'?'看我的浇糖过程':'再看一次浇糖';
   $('pause').setAttribute('aria-label',state.paused?'继续浇糖':'暂停浇糖');
   $('pause').innerHTML=state.paused?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14m8-14v14"/></svg>';
   $('undo').disabled=state.strokes.length===0;
@@ -229,27 +247,39 @@ function updateButtons() {
 }
 function moveView(type,instant=false) {
   state.view=type;const aspect=container.clientWidth/container.clientHeight;
-  const distance=Math.max(18,18.5/aspect);
+  const distance=type==='top'?Math.max(15.5,15.8/aspect):Math.max(18,18.5/aspect);
   const position=type==='pour'?v(3.3,8.2,10.6):type==='detail'?v(.8,3.8,5.3):type==='top'?v(.1,distance,.31):v(4.2,12.8,13.5).setLength(distance);
   const target=type==='pour'?v(0,.6,0):type==='detail'?v(.0,0,-.25):v(.1,0,.3);
   $('angle-view').setAttribute('aria-pressed',String(type==='angle'));$('top-view').setAttribute('aria-pressed',String(type==='top'));
   $('detail-view').setAttribute('aria-pressed',String(type==='detail'));controls.minDistance=type==='detail'?4:8;
   $('pour-view').setAttribute('aria-pressed',String(type==='pour'));
-  if(instant||reducedMotion){camera.position.copy(position);controls.target.copy(target);controls.update();}
+  if(instant||reducedMotion){cameraMove=null;camera.position.copy(position);controls.target.copy(target);controls.update();}
   else cameraMove={from:camera.position.clone(),to:position,start:performance.now(),target:controls.target.clone(),targetTo:target};
   state.needsRender=true;
 }
 function setMode(mode) {
   if(state.mode===mode)return;
-  if(state.drawing||state.draining)finishStroke(true);state.mode=mode;state.playing=false;state.progress=1;
+  if(state.drawing||state.draining)finishStroke(true);saveDrawingWorkspace();state.mode=mode;state.playing=false;state.progress=1;
   $('watch-mode').setAttribute('aria-pressed',String(mode==='watch'));$('draw-mode').setAttribute('aria-pressed',String(mode==='draw'));
-  $('pattern-panel').hidden=mode==='draw';$('draw-info').hidden=mode!=='draw';
-  controls.enabled=mode==='watch';container.style.cursor=mode==='draw'?'crosshair':'grab';
-  $('hint').lastChild.textContent=mode==='draw'?'按住石板画一笔，松开收笔':'拖动转一转，滚轮凑近看';
+  $('template-mode').setAttribute('aria-pressed',String(mode==='template'));
+  $('pattern-panel').hidden=mode==='draw';$('draw-info').hidden=mode!=='draw';$('template-options').hidden=mode!=='template';$('undo').hidden=mode==='watch';
+  $('pattern-heading').textContent=mode==='template'?'选一张印记':'挑一幅糖画';
+  $('clear').lastChild.textContent=mode==='template'?'清空糖画':'清空石板';
+  document.querySelector('.studio-panel').dataset.mode=mode;
+  document.querySelector('.workbench').dataset.mode=mode;
+  controls.enabled=mode==='watch';container.style.cursor=mode!=='watch'?'crosshair':'grab';
+  $('hint').lastChild.textContent=mode==='template'?'沿着印记浇糖，松开收丝':mode==='draw'?'按住石板画一笔，松开收笔':'拖动转一转，滚轮凑近看';
+  templateGuide.setVisible(mode==='template'&&state.templateVisible);
   if(mode==='draw') {
-    state.watchStrokes=state.strokes;state.strokes=state.ownStrokes||[];
+    state.strokes=state.ownStrokes||[];
     $('scene-title').textContent='一勺糖，慢慢落';$('scene-description').textContent='按住浇糖，松开收丝。';moveView('pour');renderArtwork();
-  } else {state.ownStrokes=state.strokes;setPattern(state.pattern,false);moveView('angle');}
+  } else if(mode==='template'){
+    state.strokes=state.templateStrokes[state.templatePattern]||[];
+    templateGuide.setPattern(patterns[state.templatePattern]);
+    $('scene-title').textContent=`描一幅${patterns[state.templatePattern].name}`;$('scene-description').textContent='沿着淡色印记，慢慢落糖。';
+    renderArtwork();moveView('top');
+  } else {setPattern(state.pattern,false);moveView('angle');}
+  updatePatternSelection();
   updateButtons();
 }
 function boardPoint(event) {
@@ -273,25 +303,30 @@ function finishStroke(immediate=false) {
 }
 function wireUI() {
   $('patterns').innerHTML=patterns.map((p,i)=>`<button class="pattern" data-index="${i}" aria-pressed="${i===0}" aria-label="画${p.name}"><svg viewBox="0 0 100 100" aria-hidden="true">${p.paths.slice(0,20).map(d=>`<path d="${d}"/>`).join('')}</svg><span>${p.name}</span></button>`).join('');
-  $('patterns').addEventListener('click',event=>{const button=event.target.closest('.pattern');if(button)setPattern(Number(button.dataset.index));});
+  $('patterns').addEventListener('click',event=>{const button=event.target.closest('.pattern');if(button){const index=Number(button.dataset.index);if(state.mode==='template')setTemplate(index);else setPattern(index);}});
   $('watch-mode').onclick=()=>setMode('watch');$('draw-mode').onclick=()=>setMode('draw');
+  $('template-mode').onclick=()=>setMode('template');
+  $('template-visible').onchange=event=>{state.templateVisible=event.target.checked;templateGuide.setVisible(state.mode==='template'&&state.templateVisible);state.needsRender=true;};
+  $('template-opacity').oninput=event=>{const value=Number(event.target.value);templateGuide.setOpacity(value);$('template-opacity-value').textContent=value<.35?'浅一些':value>.65?'深一些':'适中';state.needsRender=true;};
   $('thickness').oninput=event=>{if(state.drawing||state.draining)finishStroke(true);state.thickness=Number(event.target.value);$('thickness-value').textContent=state.thickness<.035?'少一些':state.thickness>.045?'多一些':'适中';renderArtwork();};
   $('height').oninput=event=>{pour.height=Number(event.target.value);$('height-value').textContent=pour.height<1?'低勺':pour.height>1.8?'高勺':'适中';state.needsRender=true;};
   $('speed').onchange=event=>{state.speed=Number(event.target.value);};
   $('play').onclick=()=>{if(state.drawing||state.draining)finishStroke(true);renderArtwork(true);};
   $('pause').onclick=()=>{state.paused=!state.paused;updateButtons();updateProgress();};
-  $('clear').onclick=()=>{if(state.drawing||state.draining)finishStroke(true);state.clearedStrokes=state.strokes;state.strokes=[];renderArtwork();notify('石板清好了，可以重新画。');};
+  $('clear').onclick=()=>{if(state.drawing||state.draining)finishStroke(true);state.clearedStrokes=state.strokes;state.strokes=[];renderArtwork();notify(state.mode==='template'?'糖画清好了，可以对着印记重新画。':'石板清好了，可以重新画。');};
   $('undo').onclick=()=>{if(state.drawing||state.draining)finishStroke(true);state.strokes.pop();renderArtwork();};
   $('angle-view').onclick=()=>moveView('angle');$('top-view').onclick=()=>moveView('top');
   $('detail-view').onclick=()=>moveView('detail');
   $('pour-view').onclick=()=>moveView('pour');
   $('focus-view').onclick=()=>{const focus=document.body.classList.toggle('focus');$('focus-view').setAttribute('aria-label',focus?'退出专注模式':'进入专注模式');resize();};
   $('save').onclick=()=>{
-    try {renderer.render(scene,camera);const a=document.createElement('a');a.download=`糖画铺-${state.mode==='draw'?'我的糖画':patterns[state.pattern].name}.png`;a.href=renderer.domElement.toDataURL('image/png');a.click();notify('这份甜，已经存成图片。');}
+    const guideVisible=templateGuide.visible;
+    try {templateGuide.setVisible(false);renderer.render(scene,camera);const a=document.createElement('a');const name=state.mode==='template'?`${patterns[state.templatePattern].name}-我的糖画`:state.mode==='draw'?'我的糖画':patterns[state.pattern].name;a.download=`糖画铺-${name}.png`;a.href=renderer.domElement.toDataURL('image/png');a.click();notify('这份甜，已经存成图片。');}
     catch{notify('图片没能保存，请刷新后再试一次。');}
+    finally{templateGuide.setVisible(guideVisible);state.needsRender=true;}
   };
   container.addEventListener('pointerdown',e=>{
-    if(state.mode!=='draw'||e.button!==0||state.drawing)return;
+    if(state.mode==='watch'||e.button!==0||state.drawing)return;
     const p=boardPoint(e);if(!p)return;if(state.drawing||state.draining)finishStroke(true);
     if(state.playing){state.playing=false;renderArtwork();}
     cameraMove=null;state.drawing=true;state.drawPoints=[p];liveDeposits=[];drawCommands=[{t:0,point:[p.x,p.z]}];pour.amount=state.thickness;pour.reset(p);pour.setTarget(p,true);drawStart=pour.time;
@@ -319,12 +354,13 @@ function frame(time) {
   if(document.hidden)return;
   if(state.playing&&!state.paused)advancePlayback(delta*state.speed);
   if(state.drawing||state.draining){pour.step(delta);positionSpoon();if(state.draining&&!pour.active)commitStroke();state.needsRender=true;}
+  const movingCamera=!!cameraMove;
   if(cameraMove) {
     const t=Math.min(1,(time-cameraMove.start)/850),ease=1-Math.pow(1-t,4);
     camera.position.lerpVectors(cameraMove.from,cameraMove.to,ease);controls.target.lerpVectors(cameraMove.target,cameraMove.targetTo,ease);state.needsRender=true;if(t===1)cameraMove=null;
   }
   if(!state.paused&&sugarLayer.settle(delta))state.needsRender=true;
-  if(controls.enabled||cameraMove)controls.update();
+  if(controls.enabled||movingCamera)controls.update();
   if(state.needsRender){renderer.render(scene,camera);state.needsRender=false;}
 }
 function showError(message) {
@@ -332,7 +368,12 @@ function showError(message) {
   document.querySelectorAll('.studio-panel button, .view-tools button, #save').forEach(b=>b.disabled=true);
 }
 try {
-  makeScene();wireUI();setPattern(0,!reducedMotion);$('loading').hidden=true;renderer.setAnimationLoop(frame);
+  makeScene();wireUI();
+  const initialMode=new URLSearchParams(location.search).get('mode');
+  setPattern(0,!reducedMotion&&initialMode!=='template'&&initialMode!=='draw');
+  if(initialMode==='template'||initialMode==='draw'){setMode(initialMode);moveView(initialMode==='template'?'top':'pour',true);}
+  controls.update();renderer.render(scene,camera);
+  $('loading').hidden=true;renderer.setAnimationLoop(frame);
   // Read-only diagnostics used by the local interaction verification.
-  window.sugarStudio={getState:()=>({mode:state.mode,pattern:patterns[state.pattern].id,strokes:state.strokes.length,progress:state.progress,playing:state.playing,paused:state.paused,drawing:state.drawing,draining:state.draining,view:state.view,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,material:sugarLayer.stats(),pour:pour.stats()}),projectPoint:(x,z)=>{const p=v(x,.09,z).project(camera),r=container.getBoundingClientRect();return{x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};}};
+  window.sugarStudio={getState:()=>({mode:state.mode,pattern:patterns[state.pattern].id,strokes:state.strokes.length,progress:state.progress,playing:state.playing,paused:state.paused,drawing:state.drawing,draining:state.draining,view:state.view,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,material:sugarLayer.stats(),pour:pour.stats(),template:templateGuide.stats()}),projectPoint:(x,z)=>{camera.updateMatrixWorld();const p=v(x,.09,z).project(camera),r=container.getBoundingClientRect();return{x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};}};
 } catch(error) {console.error(error);showError('糖画摊暂时没能开起来，请使用支持 WebGL 的浏览器刷新重试。');}

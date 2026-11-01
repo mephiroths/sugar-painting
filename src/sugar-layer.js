@@ -82,12 +82,14 @@ export class SugarLayer {
     `);
   }
 
-  attachMarble(material) {
+  attachMarble(material,guide=null) {
     material.onBeforeCompile=shader=>{
       Object.assign(shader.uniforms,this.uniforms);
+      if(guide)Object.assign(shader.uniforms,guide.uniforms);
       shader.vertexShader='varying vec3 marbleWorld;\n'+shader.vertexShader;
       shader.vertexShader=shader.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nmarbleWorld=(modelMatrix*vec4(transformed,1.)).xyz;');
       shader.fragmentShader='uniform sampler2D sugarHeight;uniform vec2 sugarSize;uniform vec2 sugarTexel;varying vec3 marbleWorld;\n'+shader.fragmentShader;
+      if(guide)shader.fragmentShader='uniform sampler2D guideMask;uniform float guideEnabled;uniform float guideOpacity;uniform vec3 guideInk;\n'+shader.fragmentShader;
       shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`
         #include <color_fragment>
         vec2 honeyUV=marbleWorld.xz/sugarSize+.5;
@@ -98,10 +100,11 @@ export class SugarLayer {
           diffuseColor.rgb*=mix(vec3(1.),vec3(1.,.79,.43),amberShadow*.32);
           float caustic=clamp(abs(depth-side)*13.,0.,.55);
           diffuseColor.rgb+=vec3(.075,.045,.009)*caustic;
+          ${guide?'float printedGuide=texture2D(guideMask,honeyUV).r*guideEnabled*guideOpacity;diffuseColor.rgb=mix(diffuseColor.rgb,guideInk,printedGuide);':''}
         }
       `);
     };
-    material.customProgramCacheKey=()=> 'marble-sugar-contact-v2';
+    material.customProgramCacheKey=()=> guide?'marble-sugar-contact-template-v3':'marble-sugar-contact-v2';
   }
 
   reset(records,radius) {

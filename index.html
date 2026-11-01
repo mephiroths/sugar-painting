@@ -21,16 +21,17 @@
   <main class="workbench">
     <aside class="studio-panel" aria-label="糖画工具">
       <div class="introduction"><h1>把童年，<br>画成甜的。</h1><p>一勺热糖，几笔流转。<br>让记忆里的糖画，再亮一次。</p></div>
-      <div class="mode-switch" aria-label="创作方式"><button id="watch-mode" aria-pressed="true">看师傅画</button><button id="draw-mode" aria-pressed="false">我来画一笔</button></div>
-      <div id="pattern-panel"><h2>挑一幅糖画</h2><div class="patterns" id="patterns"></div></div>
-      <div class="draw-info" id="draw-info" hidden><h2>提起勺，慢慢走</h2><p>按住让糖流下，移动铜勺画出细线。停一停会积糖，松开后余糖继续落完。</p><button class="text-button" id="undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5-5 5 5 5M3 10h11a6 6 0 0 1 0 12"/></svg>撤回上一笔</button></div>
+      <div class="mode-switch" aria-label="创作方式"><button id="watch-mode" aria-pressed="true">看师傅画</button><button id="draw-mode" aria-pressed="false">自由画</button><button id="template-mode" aria-pressed="false">印记模板</button></div>
+      <div id="pattern-panel"><h2 id="pattern-heading">挑一幅糖画</h2><div class="patterns" id="patterns"></div></div>
+      <div id="template-options" hidden><p class="template-help">沿着淡色印记浇糖，画好后藏起印记。</p><label class="guide-toggle"><input id="template-visible" type="checkbox" checked />显示印记</label><div class="setting-row"><label for="template-opacity">印记深浅</label><output id="template-opacity-value" for="template-opacity">适中</output></div><input id="template-opacity" type="range" min="0.15" max="0.85" step="0.05" value="0.5" /></div>
+      <div class="draw-info" id="draw-info" hidden><h2>提起勺，慢慢走</h2><p>按住让糖流下，移动铜勺画出细线。停一停会积糖，松开后余糖继续落完。</p></div>
       <div class="settings">
-        <div class="setting-row"><label for="thickness">出糖量</label><output id="thickness-value" for="thickness">适中</output></div><input id="thickness" type="range" min="0.025" max="0.06" step="0.005" value="0.04" />
-        <div class="setting-row"><label for="height">提勺高度</label><output id="height-value" for="height">适中</output></div><input id="height" type="range" min="0.65" max="2.3" step="0.05" value="1.55" />
+        <div class="setting-control"><div class="setting-row"><label for="thickness">出糖量</label><output id="thickness-value" for="thickness">适中</output></div><input id="thickness" type="range" min="0.025" max="0.06" step="0.005" value="0.04" /></div>
+        <div class="setting-control"><div class="setting-row"><label for="height">提勺高度</label><output id="height-value" for="height">适中</output></div><input id="height" type="range" min="0.65" max="2.3" step="0.05" value="1.55" /></div>
         <div class="setting-row speed-row"><label for="speed">浇糖速度</label><select id="speed"><option value="0.65">慢慢来</option><option value="1" selected>刚刚好</option><option value="1.8">快一点</option></select></div>
       </div>
       <button class="primary-button" id="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg><span>再看一次浇糖</span></button>
-      <button class="text-button clear-button" id="clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg>清空石板</button>
+      <div class="secondary-actions"><button class="text-button" id="undo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5-5 5 5 5M3 10h11a6 6 0 0 1 0 12"/></svg>撤回一笔</button><button class="text-button clear-button" id="clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg>清空石板</button></div>
       <p class="panel-foot">糖会凝固，快乐不会。</p>
     </aside>
 
