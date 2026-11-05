@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {captureSurface,applySurface,encodeSurface,decodeSurface} from './src/surface-record.js';
+const nx=16,nz=12,field=new Float32Array(nx*nz),heat=new Float32Array(nx*nz);
+field[5*nx+4]=.037;field[8*nx+7]=.002;heat[5*nx+4]=.6;
+const source={field,heat,bounds:[3,8,4,9],time:7,hotUntil:7.2};
+const compact=captureSurface(source,nx,nz),encoded=encodeSurface(compact),decoded=decodeSurface(JSON.parse(JSON.stringify(encoded)),nx,nz);
+const target={nx,field:new Float32Array(nx*nz),heat:new Float32Array(nx*nz),texture:{},calls:0,updateDrawRange(){this.calls++;}};applySurface(target,decoded);
+assert.deepEqual(target.field,field);assert.deepEqual(target.heat,heat);assert.deepEqual(target.bounds,source.bounds);
+assert.ok(Math.abs(target.hotUntil-.2)<1e-9);assert.equal(target.texture.needsUpdate,true);assert.equal(target.calls,1);
+assert.throws(()=>decodeSurface({...encoded,field:'broken'},nx,nz));
+assert.throws(()=>decodeSurface({...encoded,width:nx+1},nx,nz));
+assert.equal(captureSurface({...source,bounds:[nx,0,nz,0]},nx,nz),null);
+console.log(JSON.stringify({ok:true,checks:['lossless cropped float roundtrip','invalid surface rejected','empty surface supported']},null,2));

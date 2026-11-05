@@ -3,10 +3,10 @@ import * as THREE from 'three';
 // The hand controls the source, not the contact point. Parcels retain the
 // source position at their emission time and take time to reach the stone.
 export class SugarPour {
-  constructor(scene,onDeposit) {
-    this.onDeposit=onDeposit;this.time=0;this.height=1.55;this.amount=.04;this.g=28;this.v0=4;
+  constructor(scene,onDeposit,heightAt=()=>0) {
+    this.onDeposit=onDeposit;this.heightAt=heightAt;this.time=0;this.height=1.55;this.amount=.04;this.g=28;this.v0=4;
     this.source=new THREE.Vector3();this.target=new THREE.Vector3();this.velocity=new THREE.Vector3();
-    this.history=[];this.flow=false;this.gate=0;this.previousContact=null;this.contact=new THREE.Vector3();
+    this.history=[];this.flow=false;this.gate=0;this.previousContact=null;this.contact=new THREE.Vector3();this.coilRadius=0;this.coilPhase=0;
     this.rings=64;this.sides=12;this.active=false;this.flowing=false;this.sequence=0;this.totalDeposited=0;
     const positions=new Float32Array((this.rings+1)*(this.sides+1)*3),thicknesses=new Float32Array((this.rings+1)*(this.sides+1));
     const indices=[];
@@ -15,7 +15,7 @@ export class SugarPour {
     }
     this.geometry=new THREE.BufferGeometry();this.geometry.setAttribute('position',new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));
     this.geometry.setAttribute('flowThickness',new THREE.BufferAttribute(thicknesses,1).setUsage(THREE.DynamicDrawUsage));this.geometry.setIndex(indices);
-    const material=new THREE.MeshPhysicalMaterial({color:'#fffdf6',transmission:1,metalness:0,roughness:.095,ior:1.49,thickness:.04,attenuationColor:new THREE.Color('#f6ad35'),attenuationDistance:.052,envMapIntensity:1.2});
+    const material=new THREE.MeshPhysicalMaterial({color:'#fffdf6',transmission:1,metalness:0,roughness:.13,ior:1.49,thickness:.04,attenuationColor:new THREE.Color('#f3a43b'),attenuationDistance:.052,envMapIntensity:.8,specularIntensity:.8});
     material.onBeforeCompile=shader=>{
       shader.vertexShader='attribute float flowThickness;varying float parcelThickness;\n'+shader.vertexShader;
       shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nparcelThickness=flowThickness;');
@@ -30,7 +30,7 @@ export class SugarPour {
 
   reset(point) {
     this.source.copy(point);this.target.copy(point);this.velocity.set(0,0,0);this.history=[];this.gate=0;this.flow=false;
-    this.previousContact=null;this.active=false;this.flowing=false;this.mesh.visible=false;this.totalDeposited=0;
+    this.previousContact=null;this.active=false;this.flowing=false;this.mesh.visible=false;this.totalDeposited=0;this.coilRadius=0;this.coilPhase=0;
   }
   setTarget(point,flow=true) {this.target.copy(point);this.flow=flow;}
 
@@ -63,28 +63,31 @@ export class SugarPour {
       // a rigid vertical cylinder attached to the mouse.
       const x=parcel.x+parcel.vx*this.flightTime*.12,z=parcel.z+parcel.vz*this.flightTime*.12;
       const speed=Math.hypot(parcel.vx,parcel.vz);
-      const coilAmount=.045*THREE.MathUtils.smoothstep(.6-speed,0,.6);
-      this.contact.set(x+Math.cos(this.time*30)*coilAmount,.004,z+Math.sin(this.time*30)*coilAmount);
+      const coilTarget=.022*THREE.MathUtils.smoothstep(.6-speed,0,.6);
+      this.coilRadius=THREE.MathUtils.damp(this.coilRadius,coilTarget,12,dt);this.coilPhase+=30*dt;
+      const cx=x+Math.cos(this.coilPhase)*this.coilRadius,cz=z+Math.sin(this.coilPhase)*this.coilRadius;
+      this.contact.set(cx,.004+this.heightAt(cx,cz),cz);
       const volume=this.flux*parcel.flow*dt;
       if(this.previousContact){
-        const distance=this.contact.distanceTo(this.previousContact),contactSpeed=distance/Math.max(dt,.0001);
+        const distance=Math.hypot(this.contact.x-this.previousContact.x,this.contact.z-this.previousContact.z),contactSpeed=distance/Math.max(dt,.0001);
         const radius=THREE.MathUtils.clamp(Math.sqrt(this.flux/(Math.max(.8,contactSpeed)*2.0)),.026,.062);
         this.onDeposit(this.previousContact.clone(),this.contact.clone(),volume,radius);
         this.totalDeposited+=volume;
       }
       this.previousContact=this.contact.clone();
-    } else this.previousContact=null;
+    } else {this.previousContact=null;this.coilRadius=0;}
     this.active=this.flow||this.gate>.025||this.history.some(p=>p.t>=this.time-this.flightTime&&p.flow>.035);
   }
 
   updateMesh() {
     const points=[],radii=[],flags=[],position=this.geometry.attributes.position,thickness=this.geometry.attributes.flowThickness;
+    if(this.flowing)this.contact.y=.004+this.heightAt(this.contact.x,this.contact.z);
     let first=this.rings+1,last=-1;
     for(let i=0;i<=this.rings;i++){
       const u=i/this.rings,age=this.flightTime*u,parcel=this.sample(this.time-age);
       let point,flow=0;
       if(parcel){
-        const y=Math.max(.004,parcel.h-this.v0*age-.5*this.g*age*age);
+        const y=Math.max(.004,parcel.h-this.v0*age-.5*this.g*age*age)+(this.flowing?Math.max(0,this.contact.y-.004)*THREE.MathUtils.smoothstep(u,.82,1):0);
         point=new THREE.Vector3(parcel.x+parcel.vx*age*.12,y,parcel.z+parcel.vz*age*.12);flow=parcel.flow;
         if(i===this.rings&&this.flowing)point.copy(this.contact);
       } else point=this.source.clone().setY(this.height*(1-u));
@@ -109,6 +112,6 @@ export class SugarPour {
   }
 
   stats() {
-    return {active:this.active,flowing:this.flowing,flightTime:this.flightTime,source:[this.source.x,this.height,this.source.z],contact:this.flowing?this.contact.toArray():null,flux:this.flux,deposited:this.totalDeposited,threadVisible:this.mesh.visible};
+    return {active:this.active,flowing:this.flowing,commanded:this.flow,flightTime:this.flightTime,source:[this.source.x,this.height,this.source.z],contact:this.flowing?this.contact.toArray():null,flux:this.flux,deposited:this.totalDeposited,threadVisible:this.mesh.visible};
   }
 }

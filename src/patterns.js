@@ -45,8 +45,50 @@ const gourd = [
   'M62 48 C76 37 84 48 78 52 C72 56 70 49 74 48',
   'M50 82 L50 87',
 ];
+const lantern = [
+  'M34 26 C14 31 12 62 32 70 Q50 77 68 70 C88 62 86 31 66 26 Q50 20 34 26Z',
+  'M34 26 Q26 47 32 70', 'M66 26 Q74 47 68 70',
+  'M42 24 Q37 48 42 73', 'M58 24 Q63 48 58 73',
+  'M34 25 L34 19 L66 19 L66 25', 'M35 70 L35 76 L65 76 L65 70',
+  'M50 19 L50 13 Q50 8 56 8', 'M50 76 L50 88',
+  'M44 78 L42 86', 'M56 78 L58 86', 'M46 89 L54 89',
+];
+const plum = [
+  'M50 43 C39 31 41 15 50 16 C59 15 61 31 50 43Z',
+  'M48 45 C32 40 20 29 25 21 C31 13 43 22 50 43',
+  'M47 48 C31 49 17 57 22 66 C27 75 41 67 49 51',
+  'M50 52 C55 69 66 78 74 73 C82 66 68 54 53 49',
+  'M53 44 C61 29 73 18 81 24 C89 31 77 42 53 47',
+  'M47 46 C47 42 53 42 54 47 C55 52 48 53 47 48Z',
+  'M50 43 L50 36', 'M46 46 L40 42', 'M47 51 L42 56', 'M53 51 L58 57', 'M55 47 L62 45',
+  'M51 82 L51 88',
+];
+const rabbit = [
+  'M32 37 C23 32 23 20 27 10 C30 4 36 7 37 13 L40 30',
+  'M53 29 L58 10 C60 4 66 6 68 12 C70 23 66 31 62 36',
+  'M32 36 C22 40 21 53 28 61 C35 69 59 69 67 61 C75 53 72 41 62 36 C54 30 41 30 32 36Z',
+  'M31 12 Q29 22 34 30', 'M63 12 Q65 22 60 30',
+  'M36 46 C34 46 34 50 36 50 C38 50 38 46 36 46Z',
+  'M59 46 C57 46 57 50 59 50 C61 50 61 46 59 46Z',
+  'M45 54 Q48 51 51 54 Q48 58 45 54Z', 'M48 57 Q44 62 40 58', 'M48 57 Q52 62 56 58',
+  'M32 63 C23 72 29 81 39 80 L58 80 C69 81 75 72 65 63',
+  'M37 71 Q40 76 44 71', 'M54 71 Q58 76 61 71', 'M48 80 L48 87',
+];
+const blessing = [
+  'M22 21 L22 79 L78 79 L78 21 Z',
+  'M29 30 L39 30', 'M34 25 L34 30',
+  'M29 38 L39 38 L39 47 L29 47 Z', 'M34 48 L34 68',
+  'M29 52 Q27 59 24 62', 'M39 52 Q41 57 44 59',
+  'M47 30 L72 30', 'M50 36 L69 36 L69 45 L50 45 Z',
+  'M48 51 L71 51 L71 69 L48 69 Z', 'M59.5 51 L59.5 69', 'M48 60 L71 60',
+  'M50 79 L50 87',
+];
 export const patterns = [
-  {id:'butterfly', name:'蝶恋花', description:'糖丝绕成翅，甜意便有了形。', paths:butterfly, stick:[50,64], scale:1.05},
-  {id:'fish', name:'年年有鱼', description:'游进记忆里，还是那一口甜。', paths:fish, stick:[47,67], scale:1.08},
-  {id:'gourd', name:'福禄葫芦', description:'把小小福气，画进一只葫芦。', paths:gourd, stick:[50,82], scale:1.05},
+  {id:'butterfly', name:'蝶恋花', description:'糖丝绕成翅，甜意便有了形。', level:'advanced', paths:butterfly, stick:[50,64], scale:1.05},
+  {id:'fish', name:'年年有鱼', description:'游进记忆里，还是那一口甜。', level:'medium', paths:fish, stick:[47,67], scale:1.08},
+  {id:'gourd', name:'福禄葫芦', description:'把小小福气，画进一只葫芦。', level:'simple', paths:gourd, stick:[50,82], scale:1.05},
+  {id:'lantern', name:'红红灯笼', description:'一盏小灯笼，照亮团圆夜。', level:'simple', paths:lantern, stick:[50,76], scale:.99},
+  {id:'plum', name:'梅开五福', description:'一枝春意，藏着五瓣好福气。', level:'medium', paths:plum, stick:[51,82], scale:1.05},
+  {id:'rabbit', name:'玉兔迎春', description:'长耳轻摇，把春天带过来。', level:'medium', paths:rabbit, stick:[48,80], scale:1.05},
+  {id:'blessing', name:'福气满满', description:'一笔一画，把福气留住。', level:'advanced', paths:blessing, stick:[50,79], scale:1.05},
 ];

@@ -1,0 +1,22 @@
+Music used in Sugar Painting Studio
+
+Title: Asian Chinese Background Music
+Artist: Tunetank
+Pixabay track ID: 349936
+Source: https://pixabay.com/music/china-asian-chinese-background-music-349936/
+License: Pixabay Content License
+License summary: https://pixabay.com/service/license-summary/
+Full terms: https://pixabay.com/service/terms/
+Retrieved for this project: November 4, 2026
+
+Source file supplied by the project owner:
+tunetank-asian-chinese-background-music-349936.mp3
+
+The music is incorporated as background audio in this interactive sugar-painting
+application and, when enabled, in its generated artwork videos. This application
+does not offer a separate music download or redistribute it as a music library.
+The track page identifies this recording as Content ID registered. Retain the
+original download and any Pixabay license certificate for platform claims.
+
+This file records provenance and license references. A separate download
+certificate was not supplied with the MP3.

@@ -1,0 +1,13 @@
+{
+  "name": "sugar-painting-compat-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Optional isolated browser compatibility test driver",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright": "1.64.1"
+  }
+}

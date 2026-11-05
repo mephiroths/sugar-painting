@@ -15,31 +15,45 @@
   <header class="masthead">
     <a class="brand" href="./" aria-label="糖画铺首页"><span class="seal">糖</span><span>糖画铺<small>留一口，小时候的甜。</small></span></a>
     <p class="mast-note">以糖为墨，以勺为笔</p>
-    <button class="text-button" id="save"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>收藏这份甜</button>
+    <div class="mast-actions"><label class="language-picker"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg><select id="language" aria-label="语言" data-i18n-ignore><option value="zh-CN" lang="zh-CN">简体中文</option><option value="zh-TW" lang="zh-TW">繁體中文</option><option value="en" lang="en">English</option><option value="ja" lang="ja">日本語</option></select></label><button class="text-button" id="rack-open">糖画架</button></div>
   </header>
 
   <main class="workbench">
     <aside class="studio-panel" aria-label="糖画工具">
-      <div class="introduction"><h1>把童年，<br>画成甜的。</h1><p>一勺热糖，几笔流转。<br>让记忆里的糖画，再亮一次。</p></div>
-      <div class="mode-switch" aria-label="创作方式"><button id="watch-mode" aria-pressed="true">看师傅画</button><button id="draw-mode" aria-pressed="false">自由画</button><button id="template-mode" aria-pressed="false">印记模板</button></div>
-      <div id="pattern-panel"><h2 id="pattern-heading">挑一幅糖画</h2><div class="patterns" id="patterns"></div></div>
-      <div id="template-options" hidden><p class="template-help">沿着淡色印记浇糖，画好后藏起印记。</p><label class="guide-toggle"><input id="template-visible" type="checkbox" checked />显示印记</label><div class="setting-row"><label for="template-opacity">印记深浅</label><output id="template-opacity-value" for="template-opacity">适中</output></div><input id="template-opacity" type="range" min="0.15" max="0.85" step="0.05" value="0.5" /></div>
-      <div class="draw-info" id="draw-info" hidden><h2>提起勺，慢慢走</h2><p>按住让糖流下，移动铜勺画出细线。停一停会积糖，松开后余糖继续落完。</p></div>
-      <div class="settings">
-        <div class="setting-control"><div class="setting-row"><label for="thickness">出糖量</label><output id="thickness-value" for="thickness">适中</output></div><input id="thickness" type="range" min="0.025" max="0.06" step="0.005" value="0.04" /></div>
-        <div class="setting-control"><div class="setting-row"><label for="height">提勺高度</label><output id="height-value" for="height">适中</output></div><input id="height" type="range" min="0.65" max="2.3" step="0.05" value="1.55" /></div>
-        <div class="setting-row speed-row"><label for="speed">浇糖速度</label><select id="speed"><option value="0.65">慢慢来</option><option value="1" selected>刚刚好</option><option value="1.8">快一点</option></select></div>
-      </div>
+      <div class="mode-switch" aria-label="创作方式"><button id="watch-mode" aria-pressed="true">看师傅画</button><button id="template-mode" aria-pressed="false">印记模板</button><button id="draw-mode" aria-pressed="false">自由画</button></div>
+
+      <details id="pattern-picker" class="tool-popover"><summary id="pattern-trigger"><span id="pattern-current">图案：蝶恋花</span></summary><div class="popover-body"><div id="pattern-panel"><div class="pattern-heading"><h2 id="pattern-heading">挑一幅糖画</h2><label for="pattern-level">难度</label><select id="pattern-level"><option value="all">全部</option><option value="simple">入门</option><option value="medium">进阶</option><option value="advanced">挑战</option></select></div><div class="patterns" id="patterns"></div></div></div></details>
+
+
+
+      <details id="drawing-settings" class="tool-popover"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg>调节</summary><div class="popover-body">      <div class="settings">
+        <div class="setting-control"><div class="setting-row"><div class="setting-label"><label for="thickness">出糖量</label><span class="shortcut-keys" title="Q 减少 / W 增加" aria-hidden="true"><kbd>Q</kbd><span>/</span><kbd>W</kbd></span></div><output id="thickness-value" for="thickness">适中</output></div><input id="thickness" type="range" min="0.025" max="0.06" step="0.005" value="0.04" aria-keyshortcuts="Q W" /></div>
+        <div class="setting-control"><div class="setting-row"><div class="setting-label"><label for="height">提勺高度</label><span class="shortcut-keys" title="E 降低 / R 提高" aria-hidden="true"><kbd>E</kbd><span>/</span><kbd>R</kbd></span></div><output id="height-value" for="height">适中</output></div><input id="height" type="range" min="0.65" max="2.3" step="0.05" value="1.55" aria-keyshortcuts="E R" /></div>
+        <div class="setting-row speed-row"><div class="setting-label"><label for="speed">浇糖速度</label><span class="shortcut-keys" title="A 减慢 / S 加快回放" aria-hidden="true"><kbd>A</kbd><span>/</span><kbd>S</kbd></span></div><select id="speed" aria-keyshortcuts="A S"><option value="0.65">慢慢来</option><option value="1" selected>刚刚好</option><option value="1.8">快一点</option></select></div>
+        <p class="desktop-input-help" id="drawing-mouse-help" hidden>左键绘画 · 右键旋转 · 滚轮缩放</p>
+      </div>      <div id="template-options" hidden><p class="template-help">沿着淡色印记浇糖，画好后藏起印记。</p><label class="guide-toggle"><input id="template-visible" type="checkbox" checked />显示印记</label><div class="setting-row"><label for="template-opacity">印记深浅</label><output id="template-opacity-value" for="template-opacity">适中</output></div><input id="template-opacity" type="range" min="0.15" max="0.85" step="0.05" value="0.5" /><label class="guide-toggle step-toggle"><input id="step-guide" type="checkbox" />逐笔引导</label></div>      <div class="draw-info" id="draw-info" hidden><h2>提起勺，慢慢走</h2><p>按住让糖流下，移动铜勺画出细线。停一停会积糖，松开后余糖继续落完。</p></div>      </div></details>
+      <details id="board-menu" class="tool-popover"><summary>作品</summary><div class="popover-body board-actions">      <div class="secondary-actions"><button class="text-button collection-button" id="gallery-save" hidden>存入糖画架</button><button class="text-button" id="undo" hidden title="撤销"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5-5 5 5 5M3 10h11a6 6 0 0 1 0 12"/></svg>撤销</button><button class="text-button" id="redo" hidden title="重做"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 5 5 5-5 5m5-5H10a6 6 0 0 0 0 12"/></svg>重做</button><button class="text-button clear-button" id="clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg>清空石板</button></div></div></details>
       <button class="primary-button" id="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg><span>再看一次浇糖</span></button>
-      <div class="secondary-actions"><button class="text-button" id="undo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5-5 5 5 5M3 10h11a6 6 0 0 1 0 12"/></svg>撤回一笔</button><button class="text-button clear-button" id="clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg>清空石板</button></div>
-      <p class="panel-foot">糖会凝固，快乐不会。</p>
+
+      <button class="primary-button finish-button" id="finish" hidden>完成并欣赏</button>
+      <button class="primary-button" id="beginner" type="button" title="从葫芦开始练习">我也来画</button>
+
     </aside>
+    <div class="workbench-status"><div class="tutorial" id="tutorial" hidden aria-live="polite"><div class="tutorial-heading"><strong id="tutorial-title">第一笔</strong><button class="icon-button" id="tutorial-close" aria-label="结束练习" title="结束练习"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button></div><p id="tutorial-text"></p><button class="text-button" id="tutorial-finish" hidden>欣赏这幅糖画</button></div><p id="workflow-hint">看师傅画一幅，再亲手试试。</p><div class="autosave-note"><span class="autosave-dot" aria-hidden="true"></span><p id="draft-status" class="draft-status" role="status" aria-live="polite">作品自动保存在本机</p></div><button class="text-button draft-retry" id="retry-save" type="button" hidden>重试保存草稿</button><button class="text-button draft-retry" id="draft-copy-open" type="button" hidden>查看页面副本</button></div>
 
     <section class="scene-panel" aria-label="三维糖画工作台">
       <div id="scene" tabindex="0" role="application" aria-label="三维糖画。观看模式下拖动旋转，滚轮缩放；绘画模式下按住石板绘画。键盘方向键旋转，空格暂停。"></div>
-      <div class="scene-caption"><span class="scene-title" id="scene-title">蝶恋花</span><span id="scene-description">糖丝绕成翅，甜意便有了形。</span></div>
-      <div class="view-tools" aria-label="视角"><button id="angle-view" aria-pressed="true">斜着看</button><button id="top-view" aria-pressed="false">俯着看</button><button id="pour-view" aria-pressed="false">看浇糖</button><button id="detail-view" aria-pressed="false" title="凑近看糖的厚度与透光">细节</button><button class="icon-button" id="focus-view" aria-label="进入专注模式" title="专注模式"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m8 0h5v-5"/></svg></button></div>
-      <div class="loading" id="loading" role="status"><span class="loading-seal">糖</span><p>热一勺糖，等一幅画。</p></div>
+      <div class="scene-caption"><h1 class="scene-title" id="scene-title">蝶恋花</h1><span id="scene-description">糖丝绕成翅，甜意便有了形。</span></div>
+      <details id="view-menu" class="view-tools tool-popover"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V4h4m10 0h4v4M3 16v4h4m10 0h4v-4M8 12h8m-4-4v8"/></svg>画面与声音</summary><div class="popover-body view-options" aria-label="视角"><button id="angle-view" aria-pressed="false">斜着看</button><button id="top-view" aria-pressed="false">俯着看</button><button id="pour-view" aria-pressed="true">看浇糖</button><button id="detail-view" aria-pressed="false" title="凑近看糖的厚度与透光">细节</button><button class="icon-button" id="focus-view" aria-label="进入专注模式" title="专注模式"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m8 0h5v-5"/></svg></button><button class="text-button" id="music-toggle" type="button" aria-pressed="true" aria-label="关闭配乐" title="开始制作后播放配乐"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/><path class="music-off-mark" d="M3 3l18 18"/></svg><span>配乐：开</span></button><button class="text-button" id="save"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>保存图片</button><button class="text-button" id="share-scene" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M5 13v7h14v-7"/></svg>分享这份甜</button><a class="music-credit" href="https://pixabay.com/music/china-asian-chinese-background-music-349936/" target="_blank" rel="noopener noreferrer">配乐来源：Tunetank · Pixabay</a></div></details>
+      <div class="rack-tools" id="rack-tools" hidden><button id="rack-manage" type="button">管理与备份</button></div>
+      <div class="loading" id="loading" role="status"><span class="loading-seal">糖</span><p>热一勺糖，等一幅画。</p><button class="text-button" id="reload-scene" type="button" hidden>重新打开画面</button></div>
+      <div class="step-controls" id="step-controls" hidden><button class="icon-button" id="step-prev" type="button" title="上一笔" aria-label="上一笔">&#8592;</button><span id="step-label" aria-live="polite"></span><button class="icon-button" id="step-next" type="button" title="下一笔" aria-label="下一笔">&#8594;</button></div>
+      <div class="scene-quick-controls" aria-label="绘画操作"><button class="icon-button" id="scene-undo" type="button" aria-label="撤销" title="撤销"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5-5 5 5 5M3 10h11a6 6 0 0 1 0 12"/></svg></button><button class="icon-button" id="scene-redo" type="button" aria-label="重做" title="重做"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 5 5 5-5 5m5-5H10a6 6 0 0 0 0 12"/></svg></button><button class="scene-finish" id="scene-finish" type="button">完成</button></div>
+      <button class="drawing-navigation" id="navigate-drawing" type="button" aria-pressed="false" hidden>移动画布</button>
+      <div class="finish-actions" id="finish-actions" hidden><p id="finish-note">保存后收进糖画架，并为下一幅清空画板。</p><button id="pin-current" type="button">保存到糖画架</button><button id="share-work" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M5 13v7h14v-7"/></svg>分享这份甜</button><button id="next-painting" type="button">保存并画下一幅</button><button id="rack-back" type="button" hidden>放回展示架</button></div>
+      <div id="work-process" class="work-process" hidden><button id="replay-work" type="button">回看制作</button><button id="replay-back" type="button" hidden>返回作品</button><details id="video-menu" class="tool-popover"><summary>导出视频</summary><div class="popover-body"><div class="video-actions"><button class="text-button" id="record-video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h11v12H4zM15 10l5-3v10l-5-3z"/></svg><span>生成视频</span></button><select id="record-format" aria-label="视频画幅"><option value="screen">当前画幅</option><option value="portrait">竖屏 9:16</option></select><a class="text-button" id="download-video" hidden>下载视频</a></div></div></details><p id="process-status" role="status"></p></div>
+      <div class="rack-navigation" id="rack-navigation" hidden><div class="rack-pages"><button id="rack-prev" type="button">上一组</button><span id="rack-counter" aria-live="polite"></span><button id="rack-next" type="button">下一组</button></div><div id="rack-items" class="rack-items" aria-label="架上的糖画"></div></div>
+      <button class="return-button" id="resume-drawing" hidden>继续创作</button>
       <div class="scene-bottom"><p id="hint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8V6a4 4 0 0 1 8 0v2M6 8h12v8a6 6 0 0 1-12 0Zm6 0v5"/></svg>拖动转一转，滚轮凑近看</p><span class="material-note">铜勺 / 麦芽糖 / 大理石板</span></div>
       <div class="playback" id="playback"><button class="icon-button" id="pause" aria-label="暂停浇糖"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14m8-14v14"/></svg></button><div class="progress-track" role="progressbar" aria-label="浇糖进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progress"></span></div><span id="progress-label">正在浇糖</span></div>
     </section>
@@ -47,6 +61,26 @@
   <footer class="footer"><span>一块石板上的小小欢喜</span><span>慢一点，甜一点。</span></footer>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<dialog id="save-work-dialog" aria-labelledby="save-work-title" aria-describedby="save-work-description">
+  <form id="save-work-form"><h2 id="save-work-title">保存到糖画架</h2><p id="save-work-description">保存一份作品，当前画板可以继续修改。</p><label for="work-name">作品名称</label><input id="work-name" name="name" maxlength="40" autocomplete="off" required autofocus /><p id="save-work-status" role="status" aria-live="polite"></p><div class="save-work-actions"><button class="text-button" id="save-work-cancel" type="button">继续画</button><button class="primary-button" id="save-work-submit" type="submit">保存作品</button></div></form>
+</dialog>
+<dialog id="share-dialog" aria-labelledby="share-title" aria-describedby="share-intro">
+  <div class="gallery-heading"><div><h2 id="share-title">分享这份甜</h2><p id="share-intro">把糖画和它的故事，一起送给朋友。</p></div><button class="icon-button" id="share-close" type="button" aria-label="关闭分享" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button></div>
+  <div class="share-content"><div class="share-artwork"><img id="share-preview" alt="糖画分享海报预览" width="1200" height="1500" hidden /></div><div class="share-options">
+    <p id="share-status" class="share-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    <button id="share-native" class="primary-button" type="button" disabled>系统分享</button><a id="share-download" class="text-button" aria-disabled="true" download>下载海报</a><button id="share-retry" class="text-button" type="button" hidden>重新生成海报</button>
+    <p class="share-culture">以勺为笔，把流动的糖画成一份祝福。</p>
+    <p class="share-note">糖画是中国民间手艺，以糖为材料，用小勺在石板上浇出图案。</p><a class="share-source" href="https://www.visitbeijing.com.cn/article/47QoPEsT1hp" target="_blank" rel="noopener noreferrer">了解传统糖画 · 北京市文旅局</a>
+    <div id="share-link-row"><label for="share-link">邀请朋友来画糖</label><input id="share-link" type="url" readonly dir="ltr" spellcheck="false" /><button id="share-copy" class="text-button" type="button">复制体验链接</button></div>
+    <p id="share-link-note" class="share-note"></p>
+  </div></div>
+</dialog>
+<dialog id="gallery" aria-labelledby="gallery-title">
+  <div class="gallery-heading"><div><h2 id="gallery-title">管理糖画架</h2><p>备份、删除或打开作品继续修改。</p></div><button class="icon-button" id="gallery-close" aria-label="关闭管理" title="关闭"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button></div>
+  <p class="gallery-status" id="gallery-status" role="status" aria-live="polite" aria-atomic="true"></p>
+  <div id="gallery-list" class="gallery-list"></div>
+  <div class="gallery-actions"><button class="text-button" id="gallery-export">导出作品备份</button><button class="text-button import-button" id="gallery-import-open" type="button">导入作品备份</button><input id="gallery-import" type="file" accept="application/json,.json" hidden /></div>
+</dialog>
 <noscript><p class="no-script">请开启 JavaScript，来体验三维糖画。糖画铺是一间用 Three.js 搭起的小小糖画摊。</p></noscript>
 <script type="module" src="./src/main.js"></script>
 </body>
