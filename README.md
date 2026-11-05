@@ -1,5 +1,7 @@
 <div align="center">
 
+[**简体中文**](README.md) · [繁體中文](README.zh-TW.md) · [English](README.en.md) · [日本語](README.ja.md)
+
 # 糖画铺 · Sugar Studio
 
 **以糖为墨，以勺为笔。**
