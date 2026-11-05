@@ -1,6 +1,22 @@
 // Chinese source copy is the stable key. Add a row here to translate new UI copy.
 // User artwork names and saved drawing data are never translated.
 const rows = [
+  ['继续修改','Continue editing','繼續修改','編集を続ける'],
+  ['打开作品','Open painting','開啟作品','作品を開く'],
+  ['已完成','Completed','已完成','完成'],
+  ['给这幅糖画起个名','Name your sugar painting','給這幅糖畫起個名','糖画に名前を付ける'],
+  ['删除这幅糖画？','Delete this painting?','刪除這幅糖畫？','この糖画を削除しますか？'],
+  ['删除后无法恢复，建议先导出备份。','This cannot be undone. Consider exporting a backup first.','刪除後無法恢復，建議先匯出備份。','削除は取り消せません。先にバックアップをおすすめします。'],
+  ['删除作品','Delete painting','刪除作品','作品を削除'],
+  ['这幅糖画，做好了','Your sugar painting is ready','這幅糖畫，做好了','糖画ができました'],
+  ['照着画','Trace','照著畫','なぞり描き'],
+  ['拿起来看看','Lift and admire','拿起來看看','持ち上げて見る'],
+  ['重播','Replay','重播','もう一度'],
+  ['看一遍，再亲手试试','Watch, then try it yourself','看一遍，再親手試試','見てから、自分でも'],
+  ['这里还没有糖画','Your display is empty','這裡還沒有糖畫','まだ糖画がありません'],
+  ['亲手做一幅，挂在这里吧','Make your first sugar painting','親手做一幅，掛在這裡吧','最初の糖画を作りましょう'],
+  ['去画第一幅','Make your first painting','去畫第一幅','最初の作品を描く'],
+
   ['画面与声音', 'View & sound', '畫面與聲音', '画面・音楽'],
   ['配乐：开', 'Music: on', '配樂：開', '音楽：オン'],
   ['配乐：关', 'Music: off', '配樂：關', '音楽：オフ'],

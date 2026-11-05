@@ -38,7 +38,7 @@ export class SugarLayer {
     // The shader softens the contour with fractional alpha. Blend it over the
     // opaque stone so the canvas keeps alpha=1; overwriting canvas alpha without
     // blending makes its premultiplied color turn into a bright fringe on export.
-    this.material=new THREE.MeshPhysicalMaterial({color:'#ffffff',metalness:0,roughness:.13,transmission:1,thickness:.1,ior:1.49,clearcoat:0,attenuationColor:new THREE.Color('#f6b750'),attenuationDistance:.058,envMapIntensity:.7,specularIntensity:.8,transparent:true});
+    this.material=new THREE.MeshPhysicalMaterial({color:'#fff8df',metalness:0,roughness:.08,transmission:1,thickness:.1,ior:1.49,clearcoat:.7,clearcoatRoughness:.1,attenuationColor:new THREE.Color('#fbc24d'),attenuationDistance:.045,envMapIntensity:1.3,specularIntensity:1,transparent:true});
     this.material.onBeforeCompile=shader=>this.patchMaterial(shader);
     this.material.customProgramCacheKey=()=> 'sugar-continuous-volume-v4';
     this.cellsX=512;this.cellsZ=420;
@@ -136,7 +136,7 @@ export class SugarLayer {
     shader.fragmentShader=shader.fragmentShader.replace('#include <transmission_fragment>',THREE.ShaderChunk.transmission_fragment.replace('material.thickness = thickness;','material.thickness = max(.002, syrupDepth * 1.45);'));
     shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>',`
       #include <roughnessmap_fragment>
-      roughnessFactor=.13+.025*smoothstep(.02,.12,syrupDepth);
+      roughnessFactor=.08+.02*smoothstep(.02,.12,syrupDepth);
     `);
     // Sparse trapped air: small clear centers and fine pale rims, visible only
     // near the surface at macro scale. No decorative glitter or opaque dots.

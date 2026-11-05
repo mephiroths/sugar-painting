@@ -1,5 +1,6 @@
 # Local dependencies and caches
 node_modules/
+.npm-cache/
 .cache/
 coverage/
 *.tsbuildinfo

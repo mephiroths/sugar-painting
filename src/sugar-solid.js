@@ -5,7 +5,7 @@ function patchSolidMaterial(shader) {
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nsolidDepth=sugarDepth;');
   shader.fragmentShader='varying float solidDepth;\n'+shader.fragmentShader;
   shader.fragmentShader=shader.fragmentShader.replace('#include <transmission_fragment>',THREE.ShaderChunk.transmission_fragment.replace('material.thickness = thickness;','material.thickness = max(.002, solidDepth * 1.45);'));
-  shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=.13+.025*smoothstep(.02,.12,solidDepth);');
+  shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=.08+.02*smoothstep(.02,.12,solidDepth);');
 }
 
 function solidMaterial(base) {

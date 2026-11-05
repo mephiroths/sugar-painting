@@ -11,6 +11,8 @@
     "playwright": "1.58.2"
   },
   "scripts": {
+    "check:ui": "node --check src/folk-ui.js && node --check build.mjs",
+    "precheck": "npm run check:ui",
     "start": "node serve.mjs",
     "build": "node build.mjs",
     "check": "node --check src/i18n.js && node --check src/locales.js && node --check src/main.js && node --check verify-drawing-input.mjs && node --check src/patterns.js && node --check src/sugar-layer.js && node --check src/sugar-solid.js && node --check src/sugar-display.js && node --check verify-inspection-shadow.mjs && node --check verify-display-cache.mjs && node --check profile-rack.mjs && node --check verify-unified-rack.mjs && node --check verify-display.mjs && node --check verify-finish-reset.mjs && node --check src/pour.js && node --check src/template-guide.js && node --check src/guide-progress.js && node --check src/draft-store.js && node --check src/surface-record.js && node --check src/portrait-video.js && node --check src/work-id.js && node --check src/gallery-merge.js && node --check src/draft-preview.js && node --check browser-test.mjs && node --check verify-browser.mjs && node --check preview.mjs && node --check verify-studio-ui.mjs && node --check src/music.js && node --check verify-music.mjs && node --check src/share.js && node --check verify-share.mjs && node --check verify-ux-flow.mjs",

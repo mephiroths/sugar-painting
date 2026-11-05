@@ -8,6 +8,7 @@
   <meta name="description" content="一勺热糖，几笔流转。在三维糖画铺里看铜勺浇糖，或亲手画一幅属于自己的糖画。" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%23a33927'/%3E%3Ctext x='32' y='46' font-size='43' text-anchor='middle' fill='%23fff1d5'%3E糖%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./folk.css" />
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/"}}</script>
 </head>
 <body>
@@ -81,6 +82,7 @@
   <div id="gallery-list" class="gallery-list"></div>
   <div class="gallery-actions"><button class="text-button" id="gallery-export">导出作品备份</button><button class="text-button import-button" id="gallery-import-open" type="button">导入作品备份</button><input id="gallery-import" type="file" accept="application/json,.json" hidden /></div>
 </dialog>
+<dialog id="delete-work-dialog" aria-labelledby="delete-work-title" aria-describedby="delete-work-description"><h2 id="delete-work-title">删除这幅糖画？</h2><p id="delete-work-name"></p><p id="delete-work-description">删除后无法恢复，建议先导出备份。</p><form method="dialog" class="delete-work-actions"><button value="cancel" class="text-button" autofocus>取消</button><button value="delete" class="primary-button">删除作品</button></form></dialog>
 <noscript><p class="no-script">请开启 JavaScript，来体验三维糖画。糖画铺是一间用 Three.js 搭起的小小糖画摊。</p></noscript>
 <script type="module" src="./src/main.js"></script>
 </body>

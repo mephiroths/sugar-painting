@@ -1,4 +1,5 @@
 import {t, getLocale, setText} from './i18n.js';
+import {uiAssets} from './folk-ui.js';
 
 // A studio invitation deliberately carries no local artwork, IDs or tracking data.
 export function experienceUrl(href, locale, mode, pattern) {
@@ -36,9 +37,10 @@ export async function createSharePoster(snapshot,name,demonstration=false) {
   const css=getComputedStyle(document.documentElement),ink=css.getPropertyValue('--color-ink').trim(),accent=css.getPropertyValue('--color-accent').trim(),muted=css.getPropertyValue('--color-muted').trim();
   const body=css.getPropertyValue('--font-body').trim(),display=css.getPropertyValue('--font-display').trim();
   ctx.fillStyle=css.getPropertyValue('--color-paper').trim();ctx.fillRect(0,0,1200,1500);
-  ctx.fillStyle=accent;ctx.fillRect(60,58,76,82);ctx.fillStyle=css.getPropertyValue('--color-accent-ink').trim();ctx.textAlign='center';ctx.font=`54px ${display}`;ctx.fillText('糖',98,118);ctx.textAlign='left';
-  ctx.fillStyle=ink;ctx.font=`38px ${display}`;ctx.fillText(t('糖画铺'),160,100);
-  ctx.fillStyle=muted;ctx.font=`22px ${body}`;ctx.fillText('中国糖画 · SUGAR PAINTING',160,136);
+  const paper=new Image(),sign=new Image();paper.src=uiAssets.paper;sign.src=uiAssets.sign;
+  await Promise.all([paper.decode(),sign.decode()]);
+  ctx.drawImage(paper,0,0,1200,1500);ctx.drawImage(sign,48,30,360,125);
+  ctx.fillStyle=muted;ctx.font=`22px ${body}`;ctx.fillText('中国糖画 · SUGAR PAINTING',710,112);
   const scale=Math.min(1080/image.width,900/image.height),w=image.width*scale,h=image.height*scale;
   ctx.drawImage(image,60+(1080-w)/2,186+(900-h)/2,w,h);
   ctx.fillStyle=accent;ctx.font=`23px ${body}`;ctx.fillText(t(demonstration?'糖画演示':'我的糖画'),60,1138);
