@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl} from './browser-test.mjs';
 import {experienceUrl,shareFilename} from './src/share.js';
 
 for(const href of ['file:///tmp/studio.html','http://localhost:5177/','http://192.168.1.2/','http://127.0.0.1/','http://10.0.0.2/','http://172.16.0.1/','http://[::1]/'])assert.equal(experienceUrl(href,'en','draw'),null);
@@ -77,7 +77,7 @@ try{
 
   await page.setViewportSize({width:1440,height:960});await page.locator('#watch-mode').click();await page.waitForFunction(()=>!sugarStudio.getState().playing);
   await page.locator('#finish').click();await page.locator('#share-work').click();await poster();await page.locator('#share-close').click();assert.equal((await page.evaluate(()=>sugarStudio.getState())).presentation.mode,'held');
-  await page.locator('#pin-current').click();await page.locator('#rack-items button').first().click();await page.locator('#share-work').click();await poster();
+  await page.locator('#pin-current').click();await confirmFinishedSave(page);await page.locator('#rack-items button').first().click();await page.locator('#share-work').click();await poster();
   const archiveLink=await page.locator('#share-link').inputValue();assert.match(archiveLink,/pattern=butterfly/);
   await page.locator('#share-close').click();assert.equal((await page.evaluate(()=>sugarStudio.getState())).presentation.mode,'inspect');checks.push('Finished work and archived work share directly while preserving their presentation');
   assert.deepEqual(errors,[]);

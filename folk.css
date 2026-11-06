@@ -49,3 +49,190 @@ body[data-presentation]:not([data-presentation='']) .mode-switch,body[data-prese
 @media(max-width:760px){#delete-work-title{font-size:28px}#delete-work-description{font-size:17px}.delete-work-actions button{min-height:48px}.delete-work-actions .primary-button{font-size:21px;min-width:120px}}
 .scene-panel:has(#drawing-settings[open]),.scene-panel:has(#board-menu[open]){z-index:10}.scene-quick-controls:has(details[open]){z-index:12}
 @media(max-width:760px){.scene-quick-controls #drawing-settings .popover-body{max-height:calc(100dvh - 360px);overflow-y:auto}}
+/* The restored oblique camera exposes wood below the stone. Keep controls
+   readable there as well as on the light slab. */
+.playback{padding:8px 15px;border:0 solid transparent;border-image-source:var(--asset-paper);border-image-slice:65 fill;border-image-width:12px;box-shadow:0 3px 12px #24150d22}.scene-quick-controls>.icon-button,.scene-quick-controls>.tool-popover>summary{color:var(--color-ink);background:none;border:0 solid transparent;border-image-source:var(--asset-paper);border-image-slice:65 fill;border-image-width:10px}
+@media(max-width:760px){.playback{padding:5px 10px}.playback .watch-speed{margin-left:0}}
+
+/* Publication pass: reserve space for the work, keep essential actions visible. */
+:root{--font-body:'Microsoft YaHei','PingFang SC','Noto Sans SC',system-ui,sans-serif}
+.workbench{min-height:0;height:100dvh}
+.language-picker select{min-height:44px;font-family:var(--font-body)}
+.workbench-status{font-family:var(--font-body);font-size:15px}
+.workbench-status .tutorial p{font:15px/1.6 var(--font-body)!important}
+.workbench-status .tutorial strong{font:600 15px/1.5 var(--font-body)!important}
+.workbench-status #tutorial-close{width:44px;min-height:44px}
+.workbench-status #tutorial-continue{grid-column:2;grid-row:2;justify-self:start;color:var(--color-accent);font-weight:600}
+.workbench-status #tutorial-finish{grid-column:2;grid-row:3;font-size:14px}
+.pattern-heading{display:flex;flex-wrap:wrap;align-items:center}
+.pattern-close{min-height:44px;min-width:44px;border:0;background:none;color:var(--color-ink);font:15px var(--font-body)}
+.patterns .pattern{overflow-wrap:normal;word-break:normal}
+.pattern span{font-family:var(--font-body);font-size:17px;line-height:1.4}
+.pattern small{font-size:14px}
+.scene-panel:not([data-presentation]) #scene{inset:70px 0 130px}
+body[data-mode='watch'] .scene-panel:not([data-presentation]) #scene{inset:0}
+.step-controls{left:auto;right:34px;top:auto;bottom:124px;transform:none;min-height:44px;gap:8px}
+.step-controls button{min-width:44px;min-height:44px}
+.drawing-navigation{min-height:44px;font:15px var(--font-body);bottom:124px}
+.scene-quick-controls .tool-popover>summary{font:17px var(--font-body);white-space:nowrap}
+.view-tools>summary{min-height:44px;font:15px var(--font-body)}
+.scene-panel[data-presentation='held'] .finish-actions{max-height:calc(100% - 90px);overflow:auto}
+.finish-actions #finish-note{font:15px/1.6 var(--font-body)}
+.finish-actions #pin-current{font:22px var(--font-display)}
+.finish-actions #next-painting{font:17px var(--font-body)}
+.scene-panel[data-presentation='inspect'] .work-process{gap:12px;top:185px;width:260px}
+.scene-panel[data-presentation='inspect'] .work-process>#share-work{order:0;border-image:none;background:var(--asset-brush) center/100% 100% no-repeat;color:#fff3da}
+.scene-panel[data-presentation='inspect'] .work-process>#replay-work{order:1}
+.scene-panel[data-presentation='inspect'] .work-process>#work-more{order:2;background:none}
+.scene-panel[data-presentation='inspect'] .work-process>#process-status{order:3;font:13px/1.5 var(--font-body)}
+#work-more>summary{min-height:48px;padding:12px 20px;text-align:center;background:var(--asset-paper) center/100% 100%;font:17px var(--font-body)}
+.scene-panel[data-presentation='inspect'] #work-more>.popover-body{position:absolute;top:calc(100% + 8px);bottom:auto;right:0;left:auto;width:260px;max-height:calc(100dvh - 160px);padding:18px;display:flex;flex-direction:column;gap:8px}
+.scene-panel[data-presentation='inspect'] #work-more:not([open])>.popover-body{display:none}
+#work-more .popover-body>button,#work-more #video-menu>summary{order:initial;min-height:44px;width:100%;padding:10px;background:none;text-align:left;font:16px var(--font-body);color:var(--color-ink)}
+#work-more #video-menu{order:initial;background:none}
+#work-more #delete-inspected{border-top:1px solid var(--color-rule);color:#8d3429}
+.scene-panel[data-presentation='inspect'] #work-more .popover-body>*{order:0}
+.scene-panel[data-presentation='inspect'] #work-more #resume-drawing{display:block;position:static;width:100%;max-width:none;padding:10px;min-height:44px;font:16px var(--font-body);text-align:left;background:none;border-image:none}
+.scene-panel[data-presentation='replay'] .work-process{max-width:280px;right:24px;top:100px;display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.scene-panel[data-presentation='replay'] .work-process button,.scene-panel[data-presentation='replay'] .work-process summary{min-height:44px;font:16px var(--font-body)}
+.scene-panel[data-presentation='replay'] .work-process #video-menu{background:none}
+.scene-panel[data-presentation='replay'] .work-process #video-menu .popover-body{position:static;width:100%;max-height:none;padding:16px;overflow:visible}
+.workbench-status:has(#retry-save:not([hidden])) .autosave-note{display:flex}
+.scene-panel[data-presentation='inspect'] #work-more #video-menu .popover-body{position:static;width:100%;padding:8px;max-height:none;box-shadow:none;background:none;border-image:none}
+.scene-panel[data-presentation='inspect'] .work-process>button{min-height:56px;font-size:22px}
+.scene-panel[data-presentation] .scene-quick-controls{display:none}
+@media(max-width:760px){
+  .app-shell,.workbench{min-height:0;height:100dvh}
+  .brand{left:4px;top:0;width:152px;height:64px}
+  .masthead{height:64px}
+  .mast-actions{top:8px;right:10px;gap:4px;display:flex;align-items:center}
+  #rack-open{min-width:64px;min-height:44px;padding:8px 10px;font-size:17px}
+  .language-picker{position:static;min-height:44px;display:flex;align-items:center}
+  .language-picker svg{display:none}
+  .language-picker select{font-size:13px;max-width:82px;min-height:44px;padding:4px}
+  .mode-switch{top:70px;left:10px;right:10px;height:44px;gap:0}
+  .mode-switch button{font-size:21px;min-height:44px;padding:4px}
+  .scene-panel{inset:116px 0 0}
+  #pattern-picker{top:120px;left:10px}
+  #pattern-picker>summary{min-height:44px;font:14px var(--font-body);padding:10px}
+  #pattern-current{max-width:160px}
+  .view-tools{right:10px;top:4px}
+  .view-tools>summary{font-size:14px;padding:10px;min-height:44px}
+  .workbench-status{top:170px;left:12px;right:12px;padding:5px 10px;font-size:14px}
+  .workbench-status .autosave-note{display:none}
+  .workbench-status .tutorial{padding:5px 10px;grid-template-columns:auto 1fr 44px;gap:2px 6px}
+  .workbench-status .tutorial p{grid-column:1/3;grid-row:2;font:14px/1.5 var(--font-body)!important}
+  .workbench-status .tutorial strong{grid-column:1/3;grid-row:1}
+  .workbench-status #tutorial-close{grid-column:3;grid-row:1/3}
+  .workbench-status #tutorial-continue{grid-column:1/3;grid-row:3;min-height:44px;font-size:15px}
+  .workbench-status #tutorial-finish{grid-column:1/3;grid-row:4;min-height:44px}
+  .workbench-status:has(#tutorial-continue:not([hidden])) .tutorial p{display:none}
+  .workbench-status #tutorial-continue:not([hidden]){grid-column:1;grid-row:2}
+  .workbench-status #tutorial-finish:not([hidden]){grid-column:2/4;grid-row:2}
+  body:has(#tutorial-continue:not([hidden])) .scene-panel:not([data-presentation]) #scene{top:150px}
+  .scene-panel:not([data-presentation]) #scene{inset:132px 0 166px}
+  body[data-mode='watch'] .scene-panel:not([data-presentation]) #scene{inset:0}
+  .scene-quick-controls{left:12px;right:12px;bottom:max(8px,env(safe-area-inset-bottom));min-height:0;gap:6px;display:grid;grid-template-columns:44px 44px 1fr 1fr;align-items:center}
+  .workbench:is([data-mode='draw'],[data-mode='template']):not([data-presentation]) .scene-quick-controls{display:grid}
+  .scene-quick-controls>.icon-button{width:44px;min-height:44px}
+  .scene-quick-controls .tool-popover>summary{font:16px var(--font-body);min-height:44px;padding:8px 6px;justify-content:center}
+  .scene-quick-controls #scene-finish{grid-column:1/-1;order:initial;margin:0;min-height:48px;font-size:25px;width:100%}
+  .drawing-navigation{bottom:112px;left:12px;font-size:14px;padding:10px;min-height:44px}
+  .step-controls{right:12px;bottom:112px;left:auto;gap:2px;font:13px var(--font-body);padding:0 4px;min-height:44px}
+  .step-controls button{min-width:32px;width:32px;min-height:44px}
+  .scene-quick-controls #drawing-settings .popover-body,.scene-quick-controls #board-menu .popover-body{position:fixed;inset:68px 12px 120px;width:auto;max-height:none;padding:20px;overflow:auto}
+  .shortcut-keys{display:none}
+  .studio-panel #pattern-picker .popover-body{position:fixed;inset:68px 10px 10px;width:auto;max-height:none;padding:20px;overflow:auto;overscroll-behavior:contain}
+  .pattern-heading{gap:6px;margin-bottom:14px}
+  .pattern-heading h2{font-size:24px;flex:1 0 calc(100% - 58px);order:0}
+  .pattern-heading .pattern-close{order:1}
+  .pattern-heading label,.pattern-heading select{order:2;font-size:15px}
+  .patterns{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .patterns .pattern,.patterns .pattern:nth-child(n+4){grid-column:auto;min-height:150px;padding:14px 8px}
+  .patterns .pattern svg{width:68px;height:72px}
+  .patterns .pattern span{font-size:16px;overflow-wrap:normal;word-break:normal}
+  body:has(#pattern-picker[open]){overflow:hidden}
+  .playback{bottom:82px;min-height:44px;left:12px;right:12px}
+  .playback #pause,.watch-speed,.watch-replay{min-height:44px}
+  .watch-cta{bottom:max(10px,env(safe-area-inset-bottom));left:12px;right:12px}
+  .watch-cta>#beginner{min-height:58px;font-size:29px}
+  .watch-cta>#finish{min-height:44px;bottom:222px;font:13px var(--font-body);color:var(--color-ink)}
+  .pattern-rail{bottom:142px;left:12px;right:12px;gap:10px}
+  .scene-panel[data-presentation='held'] .finish-actions{max-height:65%;padding:16px;gap:6px;bottom:8px}
+  .finish-actions #pin-current{font-size:20px;min-height:48px}
+  .finish-actions #next-painting{font-size:16px;min-height:44px}
+  .finish-actions #resume-drawing,.finish-actions #share-work,.finish-actions #image-work{font:15px var(--font-body);min-height:44px}
+  .finish-actions #finish-note{font:13px/1.5 var(--font-body)}
+  .scene-panel[data-presentation='inspect'] .work-process{left:12px;right:12px;top:auto;bottom:12px;width:auto;max-width:none;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .scene-panel[data-presentation='inspect'] .work-process>#share-work{grid-column:1/-1;min-height:48px}
+  .scene-panel[data-presentation='inspect'] .work-process>#replay-work{min-height:44px;font-size:17px}
+  .scene-panel[data-presentation='inspect'] .work-process>#work-more{grid-column:2}
+  .scene-panel[data-presentation='replay'] .work-process{top:56px;left:12px;right:12px;width:auto;max-width:none;max-height:calc(100% - 190px);overflow:auto;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .scene-panel[data-presentation='replay'] #video-menu{grid-column:1/-1}
+  .scene-panel[data-presentation='replay'] #process-status{font-size:12px;align-self:center;padding:0;background:none}
+  .scene-panel[data-presentation='replay'] .video-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .scene-panel[data-presentation='replay'] .video-actions select{grid-column:1/-1;min-width:0;width:100%}
+  .scene-panel[data-presentation='replay'] .video-actions .text-button{min-width:0;padding:8px;font-size:14px;white-space:normal}
+  .scene-panel[data-presentation='replay'] .playback{bottom:66px;left:12px;right:12px;width:auto}
+  #work-more>summary{min-height:44px;font-size:16px;padding:10px}
+  .scene-panel[data-presentation='inspect'] #work-more>.popover-body{position:fixed;inset:auto 12px 160px;width:auto;max-height:calc(100dvh - 230px)}
+  .scene-panel[data-presentation='inspect'] #rack-back{top:90px;min-height:44px}
+  .scene-panel[data-presentation] .scene-caption{max-height:82px;overflow:auto}
+}
+@media(max-width:360px){
+  .brand{width:138px;height:62px}.mast-actions{right:6px;gap:0}
+  .language-picker select{max-width:74px;font-size:12px}
+  #pattern-picker>summary,.view-tools>summary{font-size:12px}
+  .view-tools>summary{max-width:120px}
+}
+@media(max-width:760px) and (max-height:650px){
+  .brand{height:48px;width:124px}.mode-switch{top:52px}.mast-actions{top:3px}
+  .scene-panel{top:100px}#pattern-picker{top:104px}.workbench-status{top:152px}
+  .workbench-status .tutorial p{font-size:13px!important}
+  .scene-panel:not([data-presentation]) #scene{top:128px;bottom:158px}
+  .pattern-ticket{min-height:72px;padding:7px}.pattern-ticket svg{height:32px;width:40px}.pattern-ticket span{font-size:14px}
+  .scene-panel[data-presentation='held'] .finish-actions{max-height:63%;padding:10px;gap:2px}
+  .finish-actions #finish-note{font-size:12px}
+}
+@media(max-height:500px) and (min-width:761px){
+  .scene-panel{top:88px}.mode-switch{top:12px}.workbench-status{top:100px}
+  .pattern-rail{display:none}.scene-quick-controls{bottom:12px}
+  .scene-quick-controls #scene-finish{min-height:48px;font-size:24px}
+  .scene-panel:not([data-presentation]) #scene{inset:68px 0 110px}
+}
+@media(orientation:landscape) and (max-height:500px) and (max-width:1000px){
+  .brand{top:0;left:4px;width:130px;height:54px}.mast-actions{top:4px;right:6px;gap:0}
+  .masthead{height:56px}.header-music{display:none}
+  .language-picker{position:static}.language-picker select{min-height:44px;font-size:13px;max-width:80px}
+  #rack-open{min-height:44px;padding:6px 10px;font-size:17px;min-width:64px}
+  .mode-switch{top:5px;left:140px;right:170px;gap:0;height:44px}
+  .mode-switch button{font-size:18px;min-height:44px;padding:4px 6px}
+  .scene-panel{inset:56px 0 0}#pattern-picker{top:58px;left:10px}
+  #pattern-picker>summary{min-height:44px;font-size:13px;padding:8px}
+  .view-tools{top:2px;right:8px}.view-tools>summary{min-height:44px;font-size:13px;padding:8px}
+  .workbench-status{top:108px;left:12px;right:210px;padding:4px 8px;font-size:13px}
+  .workbench-status .autosave-note{display:none}
+  .workbench-status .tutorial p{font-size:13px!important}
+  .scene-panel:not([data-presentation]) #scene,body:has(#tutorial-continue:not([hidden])) .scene-panel:not([data-presentation]) #scene{inset:100px 200px 8px 0}
+  .pattern-rail{display:none}
+  .scene-quick-controls{left:auto;right:8px;bottom:8px;width:180px;display:grid;grid-template-columns:1fr 1fr;gap:6px;min-height:0}
+  .workbench:is([data-mode='draw'],[data-mode='template']):not([data-presentation]) .scene-quick-controls{display:grid}
+  .scene-quick-controls>.icon-button{width:100%;min-height:44px}
+  .scene-quick-controls .tool-popover>summary{font:14px var(--font-body);min-height:44px;padding:8px;display:flex;align-items:center;justify-content:center;gap:5px}
+  .scene-quick-controls .tool-popover>summary svg{width:18px;height:18px;flex-shrink:0}
+  .scene-quick-controls #scene-finish{grid-column:1/-1;min-width:0;margin:0;min-height:48px;font-size:21px}
+  .drawing-navigation{left:auto;right:8px;bottom:164px;width:180px;min-height:44px;font-size:14px}
+  .step-controls{left:auto;right:8px;bottom:214px;width:180px;font-size:13px;gap:0;padding:0 4px}
+  .step-controls button{min-width:32px;width:32px;min-height:44px}
+  .scene-panel[data-presentation='held'] .finish-actions{inset:54px 8px 8px auto;width:200px;max-width:200px;max-height:none;padding:12px;display:flex;flex-direction:column;gap:4px}
+  .finish-actions #pin-current,.finish-actions #next-painting{font-size:17px;min-height:44px;flex-basis:auto}
+  .finish-actions #finish-note{font:13px/1.5 var(--font-body)}
+  .scene-panel[data-presentation='inspect'] .work-process{left:auto;right:8px;top:62px;bottom:auto;width:180px;max-width:180px;display:flex}
+  .scene-panel[data-presentation='inspect'] .work-process>button{min-height:44px;font-size:18px}
+  .scene-panel[data-presentation='inspect'] #rack-back{left:12px;top:76px;min-height:44px;font-size:15px}
+  .scene-panel[data-presentation='inspect'] #work-more>.popover-body{inset:58px 8px 8px auto;width:240px;max-height:none}
+  .scene-panel[data-presentation='replay'] .work-process{top:54px;bottom:70px;left:auto;right:8px;width:220px;max-width:220px;max-height:none;overflow:auto;padding:12px}
+  .scene-panel[data-presentation='replay'] .playback{left:12px;right:240px;bottom:16px;width:auto}
+  .scene-panel[data-presentation='replay']>#resume-drawing{right:8px;bottom:12px;max-width:220px}
+  .scene-quick-controls #drawing-settings .popover-body,.scene-quick-controls #board-menu .popover-body,.studio-panel #pattern-picker .popover-body{position:fixed;inset:56px 10px 8px;max-height:none;width:auto;overflow:auto}
+}

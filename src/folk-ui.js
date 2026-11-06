@@ -22,7 +22,7 @@ export function installFolkUI({patterns,selectPattern,editWork,deleteWork}) {
   setText($('save-work-title'),()=>'给这幅糖画起个名');
   const quick=document.querySelector('.scene-quick-controls');quick.insertBefore($('drawing-settings'),$('scene-finish'));quick.insertBefore($('board-menu'),$('scene-finish'));
   const cta=document.createElement('div');cta.className='watch-cta';document.querySelector('.scene-panel').append(cta);cta.append($('beginner'),$('finish'));
-  const completionTitle=document.createElement('h2');completionTitle.className='completion-title';setText(completionTitle,()=>'这幅糖画，做好了');$('finish-actions').prepend(completionTitle);
+  const completionTitle=document.createElement('h2');completionTitle.className='completion-title';setText(completionTitle,()=>'先看看这份甜');$('finish-actions').prepend(completionTitle);
   const imageWork=document.createElement('button');imageWork.id='image-work';imageWork.type='button';setText(imageWork,()=>'保存图片');imageWork.onclick=()=>$('save').click();$('finish-actions').append(imageWork);
   watchTools=document.querySelector('.playback');
   const pauseLabel=document.createElement('span');pauseLabel.className='pause-label';pauseLabel.id='pause-label';watchTools.insertBefore(pauseLabel,watchTools.children[1]);
@@ -35,19 +35,23 @@ export function installFolkUI({patterns,selectPattern,editWork,deleteWork}) {
   const note=document.createElement('span');note.className='watch-invitation';setText(note,()=>'看一遍，再亲手试试');watchTools.append(note);
   const empty=document.createElement('div');empty.className='rack-empty-message';empty.id='rack-empty-message';empty.hidden=true;const title=document.createElement('h2');setText(title,()=>'这里还没有糖画');const p=document.createElement('p');setText(p,()=>'亲手做一幅，挂在这里吧');const start=document.createElement('button');start.className='primary-button';setText(start,()=>'去画第一幅');start.onclick=()=>$('resume-drawing').click();empty.append(title,p,start);document.querySelector('.scene-panel').append(empty);
   const exit=document.createElement('button');exit.type='button';exit.className='focus-exit';setText(exit,()=>'退出专注模式');exit.onclick=()=>$('focus-view').click();document.querySelector('.scene-panel').append(exit);
-  const more=document.createElement('button');more.type='button';more.className='ticket-more';setText(more,()=>'选图案');more.onclick=()=>{$('pattern-picker').open=!$('pattern-picker').open;};rail.append(more);
+  const patternClose=document.createElement('button');patternClose.type='button';patternClose.className='pattern-close';setText(patternClose,()=>'关闭');patternClose.onclick=()=>{$('pattern-picker').open=false;$('pattern-trigger').focus();};document.querySelector('.pattern-heading').append(patternClose);
+  const continuePractice=document.createElement('button');continuePractice.id='tutorial-continue';continuePractice.type='button';continuePractice.hidden=true;continuePractice.className='text-button';setText(continuePractice,()=>'继续描画');$('tutorial').append(continuePractice);
+  const more=document.createElement('details');more.id='work-more';more.className='tool-popover';const summary=document.createElement('summary');setText(summary,()=>'更多操作');const actions=document.createElement('div');actions.className='popover-body';more.append(summary,actions);$('work-process').append(more);actions.append($('edit-inspected'),imageWork,$('video-menu'),$('delete-inspected'));
+  $('work-process').addEventListener('click',event=>{if(event.target.closest('button'))more.open=false;});
   setText($('template-mode'),()=>'照着画');setText($('scene-finish'),()=>'拿起来看看');
   ready=true;localize();
 }
 export function syncFolkUI(state,presentation,gallery) {
   if(!ready)return;document.body.dataset.mode=state.mode;document.body.dataset.presentation=presentation||'';
   const selected=state.mode==='template'?state.templatePattern:state.pattern;
-  rail.hidden=state.mode==='draw'||!!presentation;
+  rail.hidden=state.mode!=='watch'||!!presentation;
   for(const button of rail.querySelectorAll('.pattern-ticket')){const i=Number(button.dataset.pattern);button.hidden=i>2;button.setAttribute('aria-pressed',String(i===selected));}
   setText(watchTools.querySelector('.pause-label'),()=>!state.playing?'已完成':state.paused?'继续浇糖':'暂停');
   const speed=watchTools.querySelector('.watch-speed');speed.value=String(state.speed);
   for(const button of document.querySelectorAll('.speed-choices button'))button.setAttribute('aria-pressed',String(Number(button.dataset.speed)===state.speed));
   for(const id of ['edit-inspected','delete-inspected'])document.getElementById(id).hidden=presentation!=='inspect';
+  document.getElementById('work-more').hidden=presentation!=='inspect';
   document.getElementById('rack-empty-message').hidden=presentation!=='rack'||gallery.length>0;
   for(const button of document.querySelectorAll('.board-export'))button.disabled=!state.hasArtwork;
 }

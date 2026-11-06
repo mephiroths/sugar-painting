@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/OrbitControls.js';
 import { patterns } from './patterns.js';
 import { SugarLayer } from './sugar-layer.js';
 import { SugarPour } from './pour.js';
+import { positionPouringSpoon } from './spoon-pose.js';
 import { TemplateGuide } from './template-guide.js';
 import { guideCoverage } from './guide-progress.js';
 import { readDraft, writeDraft, readGallery, updateGallery } from './draft-store.js';
@@ -22,7 +23,7 @@ localize();
 const container = $('scene');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const state = {mode:'watch', pattern:0, templatePattern:0, templateVisible:true, templateStrokes:{}, strokes:[], progress:1, playing:false, paused:false, speed:1, thickness:.04, drawing:false, draining:false, drawPoints:[], draft:null, needsRender:true, view:'pour', hasArtwork:true, contextLost:false, navigating:false};
-let renderer, scene, camera, controls, sugar, spoon, stick, sugarMaterial, environment, sugarLayer, pour, templateGuide;
+let renderer, scene, camera, controls, sugar, spoon, spoonLip, stick, sugarMaterial, environment, sugarLayer, pour, templateGuide;
 let toastTimer, lastTime = 0, cameraMove = null, pouringPoint = new THREE.Vector3();
 let totalLength = 1, strokeData = [], strokeCursor = 0;
 let timeline=[],playTime=0,playDuration=1,liveDeposits=[],drawCommands=[],drawStart=0,drawStop=0;
@@ -55,7 +56,7 @@ const sharing=createSharing(()=>{
   const work=gallery.find(item=>item.id===selectedDisplayId);
   const pattern=patterns[work?.pattern??(state.mode==='template'?state.templatePattern:state.pattern)];
   const mode=work?.mode??state.mode;
-  return {snapshot:captureArtwork(),name:work?.name??t(mode==='draw'?'我的糖画':pattern.name),mode,pattern:pattern.id,demonstration:work?.demonstration??mode==='watch'};
+  return {snapshot:captureShareArtwork(),name:work?.name??t(mode==='draw'?'我的糖画':pattern.name),mode,pattern:pattern.id,demonstration:work?.demonstration??mode==='watch'};
 },()=>notify('海报生成失败，请重试。原作品仍保留。'),()=>{state.needsRender=true;if(renderer&&!state.contextLost)renderer.render(scene,camera);});
 const raycaster = new THREE.Raycaster();
 const drawingPlane = new THREE.Plane(new THREE.Vector3(0,1,0),-.09);
@@ -80,10 +81,11 @@ function syncMusic() {music.setActive(!document.hidden&&!state.contextLost&&(!pr
 function setTutorial(step) {
   tutorialStep=step;$('tutorial').hidden=step===0;
   document.querySelector('.workbench').dataset.tutorial=String(step>0);
-  if(!step)return;
-  const text=['','按住葫芦的外轮廓，等糖落到石板上。','按住不放，沿着印记慢慢移动。','松开，等空中的余糖落完。','第一笔画好了。沿着印记继续画，或先欣赏这幅作品。'];
+  if(!step){if($('tutorial-continue'))$('tutorial-continue').hidden=true;return;}
+  const text=['','从圆圈起笔，按住沿深色线慢慢画。','按住不放，沿着印记慢慢移动。','松开，等空中的余糖落完。','第一笔落好了，继续沿印记描画。随时可以拿起来看看，再返回修改。'];
   setText($('tutorial-title'),()=>step===4?'第一笔完成':t('练习 {step} / 3',{step}));
   setText($('tutorial-text'),()=>text[step]);$('tutorial-finish').hidden=step!==4;
+  if($('tutorial-continue'))$('tutorial-continue').hidden=step!==4;
 }
 
 function workspaceKey() { return state.mode==='template'?`template:${state.templatePattern}`:'draw'; }
@@ -207,7 +209,7 @@ async function beginVideo() {
       if(videoCapture===capture)videoCapture=null;
       templateGuide.setVisible(false);state.needsRender=true;
       const blob=new Blob(capture.chunks,{type:recorder.mimeType});
-      if(blob.size){videoUrl=URL.createObjectURL(blob);const link=$('download-video');link.href=videoUrl;link.download=`${t('糖画铺-浇糖过程')}.${recorder.mimeType.startsWith('video/mp4')?'mp4':'webm'}`;link.hidden=false;$('video-menu').open=true;notify('录制完成，可以下载视频。');}
+      if(blob.size){videoUrl=URL.createObjectURL(blob);const link=$('download-video');link.href=videoUrl;link.download=`${t('糖画铺-浇糖过程')}.${recorder.mimeType.startsWith('video/mp4')?'mp4':'webm'}`;link.hidden=false;$('video-menu').open=true;requestAnimationFrame(()=>{if(!link.hidden&&presentationMode==='replay')link.scrollIntoView({block:'nearest',inline:'nearest'});});notify('录制完成，可以下载视频。');}
       else notify('视频没有录制成功，请重试。');
       updateButtons();
     };
@@ -240,8 +242,10 @@ function presentationUI() {
   document.querySelector('.studio-panel').inert=!!presentationMode;
   $('finish-actions').hidden=!['held','inspect'].includes(presentationMode);$('pin-current').hidden=presentationMode!=='held';$('pin-current').disabled=pinBusy;
   $('finish-note').hidden=presentationMode!=='held';
-  setText($('finish-note'),()=>state.mode==='watch'?'这是师傅的示范，保存后可在糖画架欣赏。':'保存后收进糖画架，并为下一幅清空画板。');
-  const returnParent=['held','inspect'].includes(presentationMode)?$('finish-actions'):document.querySelector('.scene-panel');
+  setText($('finish-note'),()=>state.mode==='watch'?'这是师傅的示范，保存后可在糖画架欣赏。':'还可以返回修改。确认保存后才会清空本幅画板。');
+  setText($('pin-current'),()=>'保存并去糖画架');
+  const moreActions=$('work-more').querySelector('.popover-body');
+  const returnParent=presentationMode==='inspect'?moreActions:presentationMode==='held'?$('finish-actions'):document.querySelector('.scene-panel');
   if($('resume-drawing').parentElement!==returnParent)returnParent.append($('resume-drawing'));
   $('resume-drawing').disabled=pinBusy;
   $('share-work').disabled=pinBusy||state.contextLost||!!videoCapture||videoStarting;
@@ -251,10 +255,17 @@ function presentationUI() {
   const reviewing=presentationMode==='inspect'||presentationMode==='replay',work=gallery.find(item=>item.id===selectedDisplayId),canReplay=!!work?.strokes?.length;
   setText($('edit-inspected'),()=>work?.demonstration?'打开作品':'继续修改');
   $('work-process').hidden=!reviewing;
+  const videoParent=presentationMode==='replay'?$('work-process'):moreActions;
+  if($('video-menu').parentElement!==videoParent)videoParent.append($('video-menu'));
+  if(presentationMode==='replay'&&(videoStarting||videoCapture))$('video-menu').open=true;
   for(const id of ['share-work','image-work']){
-    const parent=presentationMode==='inspect'?$('work-process'):$('finish-actions');
-    if($(id).parentElement!==parent)parent.append($(id));
+    const parent=presentationMode==='inspect'?(id==='image-work'?$('work-more').querySelector('.popover-body'):$('work-process')):$('finish-actions');
+    if($(id).parentElement!==parent){if(presentationMode==='inspect'&&id==='image-work')parent.insertBefore($(id),$('video-menu'));else parent.append($(id));}
   }
+  if(presentationMode==='inspect'&&$('work-process').firstElementChild!==$('share-work')){
+    $('work-process').prepend($('share-work'),$('replay-work'));$('work-process').append($('work-more'),$('process-status'));
+  }
+  if(presentationMode==='inspect')moreActions.append($('edit-inspected'),$('image-work'),$('video-menu'),$('resume-drawing'),$('delete-inspected'));
   $('replay-work').hidden=presentationMode==='replay';$('replay-back').hidden=presentationMode!=='replay';
   $('replay-work').disabled=!canReplay;$('record-video').disabled=!canReplay;
   setText($('process-status'),()=>canReplay?'制作过程已随作品保存':'这幅作品没有制作记录');
@@ -310,10 +321,11 @@ function exitFinish() {
   setText($('scene-description'),()=>state.mode==='template'?'沿着淡色印记，慢慢落糖。':state.mode==='watch'?patterns[state.pattern].description:'按住浇糖，松开收丝。');
   setText($('hint').lastChild,()=>state.mode==='template'?'沿着印记浇糖，松开收丝':'按住石板画一笔，松开收笔');state.needsRender=true;updateButtons();
 }
-function resumeDrawing() {exitFinish();container.style.cursor=state.mode==='watch'?'grab':'crosshair';moveView('pour');}
+function resumeDrawing() {exitFinish();container.style.cursor=state.mode==='watch'?'grab':'crosshair';moveView(state.mode==='watch'?'pour':'angle');container.focus({preventScroll:true});}
 function showFinished() {
   if(presentationMode){resumeDrawing();return;}
   if(state.drawing||state.draining)finishStroke(true);if(!state.strokes.length||state.contextLost)return;
+  if(state.mode==='watch'&&state.playing)renderArtwork();
   state.navigating=false;if(tutorialStep)setTutorial(0);
   if(state.mode!=='watch'&&coolingPending===workspaceKey()){coolingPending=null;scheduleSave(workspaceKey(),false);}
   if(videoCapture)cancelVideo('开始欣赏糖画，视频录制已取消。');
@@ -433,24 +445,11 @@ async function clearCompletedWorkspace() {
   completedWorkspaceCleared=true;state.needsRender=true;
   if(key){scheduleSave(key);await flushSave();}
 }
-async function pinFinished(startNext=false) {
+function pinFinished(startNext=false,event) {
   if(presentationMode!=='held'||!finishedSugar||pinBusy||state.contextLost)return;
-  if(pinnedWorkId){await showRack();return;}
-  const current=finishedSugar;pinBusy=true;presentationUI();
-  try {
-    holdSugar(current);setWorkbenchVisible(false);renderer.render(scene,camera);
-    const item={id:createWorkId(),name:t(state.mode==='draw'?'我的糖画':patterns[state.mode==='template'?state.templatePattern:state.pattern].name),createdAt:Date.now(),mode:state.mode==='watch'?'template':state.mode,pattern:state.mode==='watch'?state.pattern:state.templatePattern,strokes:state.strokes.map(serializeStroke),surface:encodeSurface(currentSurface()),image:galleryImage(),displayed:true,demonstration:state.mode==='watch'};
-    await runGallery(async()=>{gallery=await updateGallery(items=>[item,...items]);});
-    if(finishedSugar===current){
-      pinnedWorkId=item.id;await clearCompletedWorkspace();
-      if(finishedSugar===current){
-        if(startNext){resumeDrawing();notify('作品已保存，画板已清空，可以画下一幅。');}
-        else {rackPage=0;renderRack();notify('已插到展示架，画板已清空。');}
-      }
-    }
-  } catch {notify('作品没能保存，画作仍在石板上，可以重试。');}
-  finally {pinBusy=false;presentationUI();}
+  saveToGallery(event,startNext?'next':'rack');
 }
+
 function displayGalleryWork(id) {
   $('gallery').close();rackPage=Math.max(0,Math.floor(displayedWorks().findIndex(item=>item.id===id)/3));renderRack();inspectDisplayed(id);
 }
@@ -471,6 +470,38 @@ function captureArtwork() {
   const limit=Math.min(1800,renderer.capabilities.maxTextureSize),ratio=Math.max(pixelRatio,Math.min(3,limit/Math.max(size.x,size.y)));
   try{templateGuide.setVisible(false);renderer.setPixelRatio(ratio);renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');}
   finally{renderer.setPixelRatio(pixelRatio);templateGuide.setVisible(guideVisible);state.needsRender=true;}
+}
+// Compose the share image independently of the editing camera and UI panels.
+// Restore every renderer/model setting synchronously, even when capture fails.
+function captureShareArtwork() {
+  const previousTarget=renderer.getRenderTarget(),viewport=renderer.getViewport(new THREE.Vector4());
+  let target=null;
+  const wasHidden=!!hiddenWorkbench,guideVisible=templateGuide.visible,background=scene.background;
+  let temporary=null,object=['held','inspect'].includes(presentationMode)?activePresentation():null;
+  const position=object?.position.clone(),rotation=object?.quaternion.clone();
+  try {
+    setWorkbenchVisible(false);templateGuide.setVisible(false);scene.background=new THREE.Color('#f1e6d2');
+    if(!object){temporary=createMountedSugar(sugarLayer);if(!temporary)return captureArtwork();object=temporary;scene.add(object);}
+    holdSugar(object);
+    const bounds=new THREE.Box3().setFromObject(object),center=bounds.getCenter(new THREE.Vector3()),extent=bounds.getSize(new THREE.Vector3());
+    const photo=camera.clone();photo.aspect=1080/900;photo.updateProjectionMatrix();
+    const tan=Math.tan(THREE.MathUtils.degToRad(photo.fov/2));
+    const distance=Math.max(extent.y,extent.x/photo.aspect)/(2*tan*.85)+extent.z;
+    photo.position.copy(center).add(v(.04,.015,1).normalize().multiplyScalar(Math.max(2,distance)));photo.lookAt(center);
+    target=new THREE.WebGLRenderTarget(1080,900);target.texture.colorSpace=THREE.SRGBColorSpace;
+    renderer.setRenderTarget(target);renderer.render(scene,photo);
+    const pixels=new Uint8Array(1080*900*4);renderer.readRenderTargetPixels(target,0,0,1080,900,pixels);
+    const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=900;
+    const context=canvas.getContext('2d'),image=context.createImageData(1080,900);
+    for(let y=0;y<900;y++)image.data.set(pixels.subarray((899-y)*1080*4,(900-y)*1080*4),y*1080*4);
+    context.putImageData(image,0,0);return canvas.toDataURL('image/png');
+  } finally {
+    if(temporary)disposeDisplay(temporary);
+    else if(object&&position){object.position.copy(position);object.quaternion.copy(rotation);object.updateMatrixWorld(true);}
+    if(!wasHidden)setWorkbenchVisible(true);
+    scene.background=background;
+    templateGuide.setVisible(guideVisible);renderer.setRenderTarget(previousTarget);renderer.setViewport(viewport);target?.dispose();renderer.render(scene,camera);state.needsRender=true;
+  }
 }
 function runGallery(task) {
   const operation=galleryQueue.catch(()=>{}).then(task);
@@ -527,14 +558,20 @@ async function deleteGalleryWork(item) {
       const token=beginGallery('正在删除作品…');
       try {await runGallery(async()=>{gallery=await updateGallery(items=>items.filter(entry=>entry.id!==item.id));renderGallery();});if(selectedDisplayId===item.id)renderRack();endGallery(token,'作品已删除。');} catch {endGallery(token,'删除失败，请检查浏览器存储后重试。','error');}
 }
-function saveToGallery(event) {
+function saveToGallery(event,finishDestination=null) {
   closeToolPopovers();if(workSaving||$('save-work-dialog').open||state.contextLost)return;
   if(state.drawing||state.draining)finishStroke(true);
-  if(state.mode==='watch'||!state.strokes.length){notify('先画一幅糖画，再存入糖画架。');return;}
+  if((state.mode==='watch'&&!finishDestination)||!state.strokes.length){notify('先画一幅糖画，再存入糖画架。');return;}
   if(state.playing){const original=currentSurface();renderArtwork();applySurface(sugarLayer,original);}
   try {
-    pendingWork={id:createWorkId(),createdAt:Date.now(),mode:state.mode,pattern:state.templatePattern,strokes:state.strokes.map(serializeStroke),surface:encodeSurface(currentSurface()),image:galleryImage()};
-    $('work-name').value=t(state.mode==='template'?patterns[state.templatePattern].name:'我的糖画');
+    pendingWork={id:createWorkId(),createdAt:Date.now(),mode:state.mode==='watch'?'template':state.mode,pattern:state.mode==='watch'?state.pattern:state.templatePattern,strokes:state.strokes.map(serializeStroke),surface:encodeSurface(currentSurface()),image:galleryImage(),...(finishDestination?{displayed:true,demonstration:state.mode==='watch'}:{})};
+    pendingWork.finishDestination=finishDestination;
+    const base=t(state.mode==='draw'?'我的糖画':patterns[state.mode==='watch'?state.pattern:state.templatePattern].name);
+    let name=base,number=2;while(gallery.some(item=>item.name===name)){const suffix=' · '+number++;name=Array.from(base).slice(0,40-suffix.length).join('')+suffix;}
+    $('work-name').value=name;
+    setText($('save-work-description'),()=>finishDestination==='rack'?'保存后清空本幅画板，并前往糖画架。':finishDestination==='next'?'保存后清空本幅画板，开始下一幅。':'保存一份作品，当前画板可以继续修改。');
+    setText($('save-work-submit'),()=>finishDestination==='rack'?'保存并去糖画架':finishDestination==='next'?'保存并画下一幅':'保存作品');
+    setText($('save-work-cancel'),()=>finishDestination?'返回欣赏':'继续画');
     setText($('save-work-status'),'');workSaveFocus=event?.currentTarget instanceof HTMLElement?event.currentTarget:document.activeElement;workSavePaused=state.paused;state.paused=true;
     $('save-work-dialog').showModal();$('work-name').focus();$('work-name').select();
   } catch(error) {pendingWork=null;notify('作品没能保存，画作仍在石板上，可以重试。');}
@@ -543,12 +580,16 @@ async function submitSavedWork(event) {
   event.preventDefault();if(workSaving||!pendingWork)return;
   const name=$('work-name').value.trim();
   if(!name){setText($('save-work-status'),'请给作品取个名字。');$('work-name').focus();return;}
-  const item={...pendingWork,name:Array.from(name).slice(0,40).join('')};workSaving=true;
+  const {finishDestination,...snapshot}=pendingWork;const item={...snapshot,name:Array.from(name).slice(0,40).join('')};workSaving=true;
   $('save-work-submit').disabled=true;$('save-work-cancel').disabled=true;$('work-name').readOnly=true;
   setText($('save-work-status'),'正在保存作品…');
   try{
     await runGallery(async()=>{gallery=await updateGallery(items=>[item,...items.filter(work=>work.id!==item.id)]);});
-    $('save-work-dialog').close();notify('已存入糖画架。');
+    if(finishDestination){pinnedWorkId=item.id;await clearCompletedWorkspace();}
+    $('save-work-dialog').close();
+    if(finishDestination==='rack'){rackPage=0;renderRack();$('rack-items').querySelector('button')?.focus({preventScroll:true});notify('已插到展示架，画板已清空。');}
+    else if(finishDestination==='next'){resumeDrawing();notify('作品已保存，画板已清空，可以画下一幅。');}
+    else notify('已存入糖画架。');
   }catch(error){setText($('save-work-status'),error?.name==='QuotaExceededError'?'糖画架空间不足，请导出备份并清理旧作品后重试。':'作品没能保存，画作仍在石板上，可以重试。');}
   finally{workSaving=false;$('save-work-submit').disabled=false;$('save-work-cancel').disabled=false;$('work-name').readOnly=false;}
 }
@@ -618,7 +659,7 @@ function makeScene() {
   renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
   container.appendChild(renderer.domElement);
   scene=new THREE.Scene();scene.background=new THREE.Color('#40352b');
-  camera=new THREE.PerspectiveCamera(25,1,.1,100);camera.position.set(4.2,12.8,13.5);
+  camera=new THREE.PerspectiveCamera(36,1,.1,100);camera.position.set(4.2,12.8,13.5);
   controls=new OrbitControls(camera,renderer.domElement);controls.target.set(.1,0,.3);controls.enableDamping=true;controls.dampingFactor=.09;
   controls.enablePan=false;controls.minDistance=8;controls.maxDistance=40;controls.maxPolarAngle=Math.PI*.44;controls.minPolarAngle=.01;
   controls.listenToKeyEvents(container);
@@ -674,7 +715,8 @@ function makeScene() {
   spoon=new THREE.Group();spoon.scale.setScalar(2.2);scene.add(spoon);
   const profile=[[0,0],[.10,.012],[.22,.07],[.32,.18],[.35,.26],[.35,.29],[.32,.30],[.29,.26],[.26,.18],[.18,.12],[0,.10]].map(p=>new THREE.Vector2(...p));
   const cup=mesh(new THREE.LatheGeometry(profile,48),copper,spoon);cup.rotation.z=-.27;
-  const spoonSugar=mesh(new THREE.CylinderGeometry(.285,.20,.035,40),new THREE.MeshPhysicalMaterial({color:'#e7a331',roughness:.13,metalness:0,transmission:.25,thickness:.08,ior:1.49,clearcoat:1}),spoon);spoonSugar.position.set(.05,.23,0);spoonSugar.rotation.z=-.27;
+  spoonLip=new THREE.Object3D();spoonLip.name='铜勺出糖口';spoonLip.position.set(.32,.285,0);cup.add(spoonLip);
+  const spoonSugar=mesh(new THREE.CylinderGeometry(.30,.20,.025,40),new THREE.MeshPhysicalMaterial({color:'#e7a331',roughness:.13,metalness:0,transmission:.25,thickness:.08,ior:1.49,clearcoat:1}),cup);spoonSugar.position.set(0,.272,0);
   rod(v(0,.22,-.28),v(.05,.82,-1.72),.045,copper,spoon);
   rod(v(.05,.82,-1.72),v(.08,1.02,-2.2),.075,bamboo,spoon);
   pour=new SugarPour(scene,(a,b,volume,radius)=>{
@@ -692,10 +734,10 @@ function resize() {
   const oldAspect=camera.aspect,newAspect=w/h;
   camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);state.needsRender=true;
   if(presentationMode&&presentationMode!=='replay'&&finishedSize){fitPresentation(state.view,true);return;}
-  if(controls&&!state.drawing&&!state.navigating&&['pour','detail'].includes(state.view)&&Math.abs(oldAspect-newAspect)>.001){
+  if(controls&&!state.drawing&&!state.navigating&&['pour','detail','top','angle'].includes(state.view)&&Math.abs(oldAspect-newAspect)>.001){
     moveView(state.view,true);
   }
-  if(!state.drawing&&!state.navigating&&controls&&!['detail','pour','custom'].includes(state.view)){const distance=camera.position.distanceTo(controls.target);const top=state.view==='top';const minFit=Math.max(top?15.5:17.8,(top?15.8:18.5)/(w/h));if(distance<minFit)camera.position.sub(controls.target).setLength(minFit).add(controls.target);}
+  if(!state.drawing&&!state.navigating&&controls&&!['detail','pour','custom','top','angle'].includes(state.view)){const distance=camera.position.distanceTo(controls.target);const top=state.view==='top';const minFit=Math.max(top?15.5:17.8,(top?15.8:18.5)/(w/h));if(distance<minFit)camera.position.sub(controls.target).setLength(minFit).add(controls.target);}
 }
 function disposeGroup(group) {
   while(group.children.length){const child=group.children.pop();child.parent=null;child.geometry?.dispose();if(child.material&&child.material!==sugarMaterial)child.material.dispose();}
@@ -798,9 +840,7 @@ function updateStepGuide() {
   state.needsRender=true;
 }
 function positionSpoon() {
-  spoon.rotation.y=-.65;
-  spoon.rotation.z=THREE.MathUtils.lerp(.12,-.12,pour.gate);
-  spoon.position.set(pour.source.x-.79,pour.height-.42,pour.source.z+.29);
+  positionPouringSpoon(spoon,spoonLip,pour.source,pour.height,pour.gate);
   spoon.visible=state.playing||state.drawing||state.draining;
 }
 function advancePlayback(dt) {
@@ -853,7 +893,7 @@ function updateButtons() {
   $('beginner').hidden=state.mode!=='watch'||!!presentationMode;
   setText($('pattern-current'),()=>t('图案：{name}',{name:t(patterns[state.mode==='template'?state.templatePattern:state.pattern].name)}));
   setLabel($('pattern-trigger'),'aria-label',()=>t('更换图案，当前为{name}',{name:t(patterns[state.mode==='template'?state.templatePattern:state.pattern].name)}));
-  setText($('workflow-hint'),()=>state.mode==='watch'?'看师傅画一幅，再亲手试试。':state.navigating?'移动画布时不会落糖；再点一次回到绘画。':state.strokes.length?'画好了？点“完成”，拿起你的糖画。':state.mode==='template'?'沿着淡色印记，按住石板开始浇糖。':'按住石板画糖，移动拉线，松开收丝。');
+  setText($('workflow-hint'),()=>state.mode==='watch'?'看师傅画一幅，再亲手试试。':state.navigating?'移动画布时不会落糖；再点一次回到绘画。':state.strokes.length?'画好了？点“拿起来看看”，还可以返回修改。':state.mode==='template'&&state.templateVisible?($('step-guide').checked?'从圆圈起笔，沿深色线描画；可随时拿起来看看。':'沿着淡色印记，按住石板开始浇糖。'):'按住画糖，移动拉线，松开收丝。');
   $('finish').hidden=state.mode!=='watch'||!!presentationMode;$('finish').disabled=!state.hasArtwork;
   $('play').hidden=state.mode==='watch'&&state.playing;
   setText($('finish'),()=>state.mode==='watch'?'欣赏示范成品':'完成并欣赏');
@@ -896,11 +936,20 @@ function setDrawingNavigation(enabled) {
 function moveView(type,instant=false) {
   if(presentationMode&&presentationMode!=='replay'){fitPresentation(type,instant);return;}
   state.view=type;const aspect=container.clientWidth/container.clientHeight;
-  const distance=type==='top'?Math.max(15.5,15.8/aspect):Math.max(18,18.5/aspect);
+  const editing=state.mode!=='watch'&&!presentationMode;
+  const distance=type==='top'&&editing?Math.max(13.5,16.5/aspect):type==='top'?Math.max(15.5,15.8/aspect):Math.max(18,18.5/aspect);
   const mobile=container.clientWidth<=760;
-  const target=type==='pour'?v(mobile?0:.2,.12,mobile?2:.3):type==='detail'?v(.0,0,-.25):v(.1,0,.3);
-  const position=type==='pour'?(mobile?v(.12,13.2,8.2):v(.05,10.5,5.3)):type==='detail'?v(.8,3.8,5.3):type==='top'?v(.1,distance,.31):v(4.2,12.8,13.5).setLength(distance);
-  position.sub(target).multiplyScalar(Math.tan(THREE.MathUtils.degToRad(18))/Math.tan(THREE.MathUtils.degToRad(camera.fov/2))).add(target);
+  const target=type==='pour'?(mobile?v(0,.2,1.7):v(0,.6,0)):type==='detail'?v(.0,0,-.25):v(.1,0,.3);
+  const position=type==='pour'?target.clone().add(v(3.3,7.6,10.6)):type==='detail'?v(.8,3.8,5.3):type==='top'?v(.1,distance,.31):v(4.2,12.8,13.5).setLength(distance);
+  if(type==='angle'&&editing){
+    const direction=v(3.3,7.6,10.6).normalize(),right=v(direction.z,0,-direction.x).normalize(),up=new THREE.Vector3().crossVectors(direction,right);
+    const tan=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));let fit=8;
+    for(const x of [-4.55,4.55])for(const z of [-3.75,3.75]){
+      const point=v(x,.09,z).sub(target),depth=point.dot(direction);
+      fit=Math.max(fit,depth+Math.abs(point.dot(right))/(tan*aspect*.88),depth+Math.abs(point.dot(up))/(tan*.88));
+    }
+    position.copy(target).addScaledVector(direction,fit+.3);
+  }
   if(type==='pour')position.sub(target).multiplyScalar(mobile?Math.max(1,.70/aspect):Math.max(1,1.15/aspect)).add(target);
   else if(type==='detail')position.sub(target).multiplyScalar(Math.max(1,1.15/aspect)).add(target);
   $('angle-view').setAttribute('aria-pressed',String(type==='angle'));$('top-view').setAttribute('aria-pressed',String(type==='top'));
@@ -933,13 +982,13 @@ function setMode(mode) {
   templateGuide.setVisible(mode==='template'&&state.templateVisible);
   if(mode==='draw') {
     state.strokes=state.ownStrokes||[];
-    setText($('scene-title'),()=>'一勺糖，慢慢落');setText($('scene-description'),()=>'按住浇糖，松开收丝。');moveView('pour');renderArtwork();restoreWorkspaceSurface();
+    setText($('scene-title'),()=>'一勺糖，慢慢落');setText($('scene-description'),()=>'按住浇糖，松开收丝。');moveView('angle');renderArtwork();restoreWorkspaceSurface();
   } else if(mode==='template'){
     state.strokes=state.templateStrokes[state.templatePattern]||[];
     templateGuide.setPattern(patterns[state.templatePattern]);
     guideStep=0;guideFinished=false;updateStepGuide();
     setText($('scene-title'),()=>t('描一幅{name}',{name:t(patterns[state.templatePattern].name)}));setText($('scene-description'),()=>'沿着淡色印记，慢慢落糖。');
-    renderArtwork();restoreWorkspaceSurface();moveView('pour');
+    renderArtwork();restoreWorkspaceSurface();moveView('angle');
   } else {setPattern(state.pattern,false);moveView('pour');}
   updateStepGuide();updatePatternSelection();
   updateButtons();
@@ -1003,11 +1052,12 @@ function wireUI() {
   $('pattern-level').onchange=filterPatterns;
   $('watch-mode').onclick=()=>setMode('watch');$('draw-mode').onclick=()=>setMode('draw');
   $('template-mode').onclick=()=>setMode('template');
-  $('beginner').onclick=()=>{setMode('template');setTemplate(2);$('height').value='0.85';$('height').dispatchEvent(new Event('input'));setTutorial(state.strokes.length?0:1);container.focus({preventScroll:true});};
+  $('beginner').onclick=()=>{setMode('template');setTemplate(2);$('height').value='0.85';$('height').dispatchEvent(new Event('input'));$('template-visible').checked=true;$('template-visible').dispatchEvent(new Event('change'));$('step-guide').checked=true;updateStepGuide();moveView('angle',true);setTutorial(state.strokes.length?0:1);container.focus({preventScroll:true});};
   $('tutorial-close').onclick=()=>setTutorial(0);
+  document.addEventListener('click',event=>{if(event.target.id==='tutorial-continue'){setTutorial(0);container.focus({preventScroll:true});}});
   $('tutorial-finish').onclick=()=>{setTutorial(0);showFinished();};
-  $('template-visible').onchange=event=>{state.templateVisible=event.target.checked;templateGuide.setVisible(!finishedSugar&&!videoCapture&&state.mode==='template'&&state.templateVisible);state.needsRender=true;};
-  $('step-guide').onchange=event=>{guideFinished=false;if(event.target.checked&&!state.templateVisible){$('template-visible').checked=true;$('template-visible').dispatchEvent(new Event('change'));}updateStepGuide();};
+  $('template-visible').onchange=event=>{state.templateVisible=event.target.checked;templateGuide.setVisible(!finishedSugar&&!videoCapture&&state.mode==='template'&&state.templateVisible);state.needsRender=true;updateButtons();};
+  $('step-guide').onchange=event=>{guideFinished=false;if(event.target.checked&&!state.templateVisible){$('template-visible').checked=true;$('template-visible').dispatchEvent(new Event('change'));}updateStepGuide();updateButtons();};
   $('step-prev').onclick=()=>{guideFinished=false;guideStep--;updateStepGuide();};
   $('step-next').onclick=()=>{guideFinished=false;guideStep++;updateStepGuide();};
   $('template-opacity').oninput=event=>{const value=Number(event.target.value);templateGuide.setOpacity(value);setText($('template-opacity-value'),()=>value<.35?'浅一些':value>.65?'深一些':'适中');state.needsRender=true;};
@@ -1017,7 +1067,7 @@ function wireUI() {
   $('play').onclick=()=>{closeToolPopovers();if(state.drawing||state.draining)finishStroke(true);renderArtwork(true);};
   $('record-video').onclick=beginVideo;
   $('replay-work').onclick=replaySavedWork;$('replay-back').onclick=stopSavedReplay;
-  $('rack-open').onclick=showRack;$('pin-current').onclick=()=>pinFinished();$('next-painting').onclick=()=>pinFinished(true);$('rack-back').onclick=renderRack;
+  $('rack-open').onclick=showRack;$('pin-current').onclick=event=>pinFinished(false,event);$('next-painting').onclick=event=>pinFinished(true,event);$('rack-back').onclick=renderRack;
   $('rack-prev').onclick=()=>{rackPage--;renderRack();};$('rack-next').onclick=()=>{rackPage++;renderRack();};
   let rackPointer=null;container.addEventListener('pointerdown',event=>{rackPointer=presentationMode==='rack'?[event.clientX,event.clientY]:null;});
   container.addEventListener('pointerup',event=>{if(!rackPointer||presentationMode!=='rack'||Math.hypot(event.clientX-rackPointer[0],event.clientY-rackPointer[1])>6){rackPointer=null;return;}rackPointer=null;const rect=container.getBoundingClientRect();cursor.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(cursor,camera);const hit=raycaster.intersectObjects(rackRoot.userData.pickTargets,false)[0];if(hit)inspectDisplayed(hit.object.userData.workId);});
@@ -1203,11 +1253,11 @@ async function start() { try {
   if(initialMode==='template'||initialMode==='draw')setMode(initialMode);
   const initialPattern=new URLSearchParams(location.search).get('pattern'),patternIndex=patterns.findIndex(pattern=>pattern.id===initialPattern);
   if(initialMode==='template'&&patternIndex>=0)setTemplate(patternIndex);
-  moveView('pour',true);
+  moveView(state.mode==='watch'?'pour':'angle',true);
   controls.update();renderer.render(scene,camera);
   $('loading').hidden=true;renderer.setAnimationLoop(frame);
   wireContextRecovery();
   // Read-only diagnostics used by the local interaction verification.
-  window.sugarStudio={getState:()=>({mode:state.mode,pattern:patterns[state.pattern].id,strokes:state.strokes.length,progress:state.progress,playing:state.playing,paused:state.paused,drawing:state.drawing,draining:state.draining,finished:!!presentationMode,finishedStick:!!activePresentation()?.getObjectByName('竹签'),presentation:{mode:presentationMode,framing:presentationFrame(),ground:{visible:displayGround.visible,y:displayGround.position.y,rackBaseY:rackRoot?.userData.groundBaseY??null},selected:selectedDisplayId,displayed:displayedWorks().length,page:rackPage,mount:(inspectedSugar||finishedSugar)?.userData.mount,normal:(inspectedSugar||finishedSugar)?v(0,1,0).applyQuaternion((inspectedSugar||finishedSugar).quaternion).toArray():null},rackItems:rackRoot?.userData.paintings?.map(item=>{const p=item.center.clone().project(camera),rect=container.getBoundingClientRect();return{id:item.id,x:rect.left+(p.x+1)/2*rect.width,y:rect.top+(1-p.y)/2*rect.height};})||[],view:state.view,music:music.stats(),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,material:sugarLayer.stats(),pour:pour.stats(),template:templateGuide.stats(),replay:state.playing?{applied:timeline.reduce((n,e)=>n+(e.depositIndex||0),0),total:timeline.reduce((n,e)=>n+(e.record?.deposits?.length||0),0)}:null}),captureSurface:()=>sugarLayer.field.slice(),projectPoint:(x,z)=>{camera.updateMatrixWorld();const p=v(x,.09,z).project(camera),r=container.getBoundingClientRect();return{x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};}};
+  window.sugarStudio={getState:()=>({mode:state.mode,pattern:patterns[state.pattern].id,strokes:state.strokes.length,progress:state.progress,playing:state.playing,paused:state.paused,drawing:state.drawing,draining:state.draining,finished:!!presentationMode,finishedStick:!!activePresentation()?.getObjectByName('竹签'),presentation:{mode:presentationMode,framing:presentationFrame(),ground:{visible:displayGround.visible,y:displayGround.position.y,rackBaseY:rackRoot?.userData.groundBaseY??null},selected:selectedDisplayId,displayed:displayedWorks().length,page:rackPage,mount:(inspectedSugar||finishedSugar)?.userData.mount,normal:(inspectedSugar||finishedSugar)?v(0,1,0).applyQuaternion((inspectedSugar||finishedSugar).quaternion).toArray():null},rackItems:rackRoot?.userData.paintings?.map(item=>{const p=item.center.clone().project(camera),rect=container.getBoundingClientRect();return{id:item.id,x:rect.left+(p.x+1)/2*rect.width,y:rect.top+(1-p.y)/2*rect.height};})||[],view:state.view,camera:{position:camera.position.toArray(),target:controls.target.toArray()},music:music.stats(),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,material:sugarLayer.stats(),pour:pour.stats(),template:templateGuide.stats(),replay:state.playing?{applied:timeline.reduce((n,e)=>n+(e.depositIndex||0),0),total:timeline.reduce((n,e)=>n+(e.record?.deposits?.length||0),0)}:null}),captureSurface:()=>sugarLayer.field.slice(),projectPoint:(x,z)=>{camera.updateMatrixWorld();const p=v(x,.09,z).project(camera),r=container.getBoundingClientRect();return{x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};}};
 } catch(error) {console.error(error);showError('糖画摊暂时没能开起来，请使用支持 WebGL 的浏览器刷新重试。');} }
 start();

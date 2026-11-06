@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {openRackManagement,closeRackManagement,launchBrowser,inspectCurrentWork,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,openRackManagement,closeRackManagement,launchBrowser,inspectCurrentWork,studioControl} from './browser-test.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url)),engineArgument=process.argv.slice(2).find(value=>!value.startsWith('--')),engines=engineArgument?[engineArgument]:['firefox','webkit'],html=fs.readFileSync(path.join(root,'糖画铺.html'));
 const modern=process.argv.includes('--compat-driver'),suffix=modern?'-modern':'',driverRoot=path.join(root,modern?'tools/compat/node_modules/playwright':'node_modules/playwright');
@@ -50,7 +50,7 @@ try {
       await page.screenshot({path:path.join(root,'artifacts',`${artifact}-desktop.png`),fullPage:true});
       await page.setViewportSize({width:390,height:844});await page.locator('#scene').scrollIntoViewIfNeeded();await frame(page);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);checks.push('390px layout');
       progress('lift and save');await page.locator('#scene-finish').click();await frame(page);assert.equal(await page.evaluate(()=>sugarStudio.getState().finished),true);assert.equal(await page.evaluate(()=>sugarStudio.getState().finishedStick),true);await page.screenshot({path:path.join(root,'artifacts',`${artifact}-mobile.png`)});checks.push('closed solid renders');
-      await page.locator('#pin-current').click();await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');await openRackManagement(page);await page.waitForFunction(()=>document.querySelectorAll('.gallery-item').length===1);await closeRackManagement(page);checks.push('gallery save');
+      await page.locator('#pin-current').click();await confirmFinishedSave(page);await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');await openRackManagement(page);await page.waitForFunction(()=>document.querySelectorAll('.gallery-item').length===1);await closeRackManagement(page);checks.push('gallery save');
       assert.equal(await page.evaluate(()=>sugarStudio.getState().finished),false);assert.equal(await page.evaluate(()=>sugarStudio.getState().strokes),0);
       await page.locator('#rack-open').click();await page.locator('#rack-items button').first().click();
       await page.locator('#share-work').click();await page.waitForFunction(()=>!!document.querySelector('#share-download').getAttribute('href'));

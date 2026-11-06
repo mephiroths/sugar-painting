@@ -7,6 +7,8 @@ export async function launchBrowser(engine='chromium',options={},driver={chromiu
   fs.mkdirSync(new URL('./artifacts/',import.meta.url),{recursive:true});
   const type=driver[engine];if(!type)throw new Error(`未知测试引擎：${engine}`);
   const launch=engine==='chromium'?{headless:true,channel:'chromium',args:[...(process.platform==='win32'?['--use-angle=d3d11']:[]),'--ignore-gpu-blocklist','--enable-webgl']}:{headless:true};
+  if(engine==='chromium'&&process.env.SUGAR_TEST_BROWSER_EXECUTABLE)launch.executablePath=process.env.SUGAR_TEST_BROWSER_EXECUTABLE;
+  if(engine==='chromium'&&process.env.SUGAR_TEST_SOFTWARE_GPU==='1')launch.args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'];
   if(engine!=='chromium'){const downloads=fileURLToPath(new URL(`./artifacts/downloads-${engine}/`,import.meta.url));fs.mkdirSync(downloads,{recursive:true});launch.downloadsPath=downloads;}
   if(!fs.existsSync(type.executablePath())){
     const parts=type.executablePath().split(path.sep),index=parts.findIndex(part=>new RegExp(`^${engine}-\\d+$`).test(part));
@@ -40,13 +42,20 @@ export async function saveCurrentWork(page,name) {
   await page.waitForFunction(()=>!document.querySelector('#save-work-dialog').open||!document.querySelector('#save-work-submit').disabled);
 }
 
+export async function confirmFinishedSave(page,name) {
+  await page.locator('#save-work-dialog').waitFor({state:'visible'});
+  if(name)await page.locator('#work-name').fill(name);
+  await page.locator('#save-work-submit').click();
+  await page.waitForFunction(()=>!document.querySelector('#save-work-dialog').open||!document.querySelector('#save-work-submit').disabled);
+}
+
 export async function inspectCurrentWork(page) {
   const mode=await page.evaluate(()=>sugarStudio.getState().presentation.mode);
   if(mode==='replay'){await page.locator('#replay-back').click();return;}
   if(mode==='inspect')return;
   if(mode!=='rack'){
     if(await page.evaluate(()=>sugarStudio.getState().mode)==='watch'){
-      await page.locator('#finish').click();await page.locator('#pin-current').click();
+      await page.locator('#finish').click();await page.locator('#pin-current').click();await confirmFinishedSave(page);
     }else{
       await saveCurrentWork(page,'过程练习');
       await page.waitForFunction(()=>document.querySelector('#toast').textContent==='已存入糖画架。');

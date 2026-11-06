@@ -1,6 +1,20 @@
 // Chinese source copy is the stable key. Add a row here to translate new UI copy.
 // User artwork names and saved drawing data are never translated.
 const rows = [
+  ['先看看这份甜','Take a look at your painting','先看看這份甜','描いた糖画を眺めましょう'],
+  ['更多操作','More actions','更多操作','その他の操作'],
+  ['继续描画','Keep tracing','繼續描畫','描き続ける'],
+  ['先拿起来看看','Preview your painting','先拿起來看看','いったん眺める'],
+  ['从圆圈起笔，按住沿深色线慢慢画。','Start at the circle. Hold and trace the dark line slowly.','從圓圈起筆，按住沿深色線慢慢畫。','丸から始め、押したまま濃い線をゆっくりなぞります。'],
+  ['第一笔落好了，继续沿印记描画。随时可以拿起来看看，再返回修改。','Your first stroke is done. Keep tracing, or preview and come back to edit.','第一筆落好了，繼續沿印記描畫。隨時可以拿起來看看，再返回修改。','最初の一筆ができました。続けてなぞるか、いったん眺めてから編集に戻れます。'],
+  ['还可以返回修改。确认保存后才会清空本幅画板。','You can return to edit. This board is cleared only after you confirm saving.','還可以返回修改。確認儲存後才會清空本幅畫板。','編集に戻れます。保存を確定すると、この画板を空にします。'],
+  ['保存并去糖画架','Save & view display','儲存並去糖畫架','保存して展示へ'],
+  ['保存后清空本幅画板，并前往糖画架。','Save this painting, clear this board, and open your display.','儲存後清空本幅畫板，並前往糖畫架。','保存後、この画板を空にして展示を開きます。'],
+  ['保存后清空本幅画板，开始下一幅。','Save this painting and clear this board for your next one.','儲存後清空本幅畫板，開始下一幅。','保存後、この画板を空にして次の作品を始めます。'],
+  ['返回欣赏','Back to preview','返回欣賞','鑑賞に戻る'],
+  ['画好了？点“拿起来看看”，还可以返回修改。','Ready? Choose Lift and admire. You can return to edit.','畫好了？點「拿起來看看」，還可以返回修改。','描けたら「持ち上げて見る」。後から編集に戻れます。'],
+  ['从圆圈起笔，沿深色线描画；可随时拿起来看看。','Start at the circle and trace the dark line. Preview at any time.','從圓圈起筆，沿深色線描畫；可隨時拿起來看看。','丸から濃い線をなぞり、いつでも持ち上げて眺められます。'],
+  ['按住画糖，移动拉线，松开收丝。','Hold to pour, move to draw, release to stop.','按住畫糖，移動拉線，鬆開收絲。','押して糖を流し、動かして描き、離して止めます。'],
   ['继续修改','Continue editing','繼續修改','編集を続ける'],
   ['打开作品','Open painting','開啟作品','作品を開く'],
   ['已完成','Completed','已完成','完成'],

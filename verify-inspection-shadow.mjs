@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'}),errors=[],checks=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -32,7 +32,7 @@ try {
   await page.goto(url);await page.waitForFunction(()=>window.sugarStudio);
   await page.locator('#finish').click();await assertCleanBackdrop('held painting');
   await page.locator('#scene').scrollIntoViewIfNeeded();await page.screenshot({path:fileURLToPath(new URL('./artifacts/shadow-held-front.png',import.meta.url))});
-  await page.locator('#pin-current').click();await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');
+  await page.locator('#pin-current').click();await confirmFinishedSave(page);await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');
   await assertRackContact();await frame();await page.screenshot({path:fileURLToPath(new URL('./artifacts/shadow-rack-contact.png',import.meta.url))});
   await page.locator('#rack-items button').first().click();await assertCleanBackdrop('inspected front');
   await (await studioControl(page,'#top-view')).click();await assertCleanBackdrop('inspected back');

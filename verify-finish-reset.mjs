@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'}),errors=[],checks=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -21,14 +21,14 @@ async function assertEmpty() {
 }
 try {
   await page.goto(url+'?mode=draw');await page.waitForFunction(()=>window.sugarStudio);await drawStroke();
-  await page.locator('#scene-finish').click();await page.locator('#resume-drawing').click();
+  await page.locator('#scene-finish').click();await (await studioControl(page,'#resume-drawing')).click();
   assert.equal((await state()).strokes,1,'preview alone can still return to edit the same painting');
   await page.locator('#scene-finish').click();
   // A failed archive must never consume the working painting.
   await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;window.restoreArchive=()=>IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.put=function(value,key){if(key==='gallery')throw new DOMException('Full','QuotaExceededError');return put.call(this,value,key);};});
-  await page.locator('#next-painting').click();assert.equal((await state()).strokes,1);assert.equal((await state()).presentation.mode,'held');
+  await page.locator('#next-painting').click();await confirmFinishedSave(page);assert.equal((await state()).strokes,1);assert.equal((await state()).presentation.mode,'held');
   assert.equal(await page.locator('#next-painting').isEnabled(),true);await page.evaluate(()=>restoreArchive());
-  await page.locator('#next-painting').click();await page.waitForFunction(()=>!sugarStudio.getState().presentation.mode&&sugarStudio.getState().strokes===0);
+  await page.locator('#save-work-submit').click();await page.waitForFunction(()=>!sugarStudio.getState().presentation.mode&&sugarStudio.getState().strokes===0);
   await assertEmpty();assert.equal((await state()).presentation.displayed,1);
   await page.locator('#scene').scrollIntoViewIfNeeded();
   await page.screenshot({path:fileURLToPath(new URL('./artifacts/finish-reset-empty-desktop.png',import.meta.url))});
@@ -36,14 +36,14 @@ try {
   await page.reload();await page.waitForFunction(()=>window.sugarStudio);await assertEmpty();
   await page.locator('#rack-open').click();await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');
   assert.equal((await state()).rackItems.length,1);await page.locator('#rack-items button').first().click();assert.ok((await state()).presentation.mount.contacts.length>0);
-  await page.locator('#resume-drawing').click();await assertEmpty();
+  await (await studioControl(page,'#resume-drawing')).click();await assertEmpty();
   checks.push('The empty draft survives reload and the completed painting remains inspectable on the rack');
   // Keep a different board unfinished while completing the gourd template.
   await drawStroke();await page.locator('#template-mode').click();await (await studioControl(page,'[data-index="2"]')).click();
-  await (await studioControl(page,'#step-guide')).check();await page.locator('#step-next').click();await drawStroke();
-  await page.locator('#scene-finish').click();await page.locator('#pin-current').click();
+  await (await studioControl(page,'#step-guide')).check();await page.keyboard.press('Escape');await page.locator('#step-next').click();await drawStroke();
+  await page.locator('#scene-finish').click();await page.locator('#pin-current').click();await confirmFinishedSave(page);
   await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack'&&sugarStudio.getState().presentation.displayed===2);
-  await page.locator('#resume-drawing').click();await assertEmpty();assert.match(await page.locator('#step-label').innerText(),/第 1 \/ /);
+  await (await studioControl(page,'#resume-drawing')).click();await assertEmpty();assert.match(await page.locator('#step-label').innerText(),/第 1 \/ /);
   await page.locator('#draw-mode').click();assert.equal((await state()).strokes,1,'another board keeps its unfinished painting');
   await page.locator('#template-mode').click();await (await studioControl(page,'[data-index="2"]')).click();await assertEmpty();
   await page.reload();await page.waitForFunction(()=>window.sugarStudio);await page.locator('#template-mode').click();await (await studioControl(page,'[data-index="2"]')).click();await assertEmpty();

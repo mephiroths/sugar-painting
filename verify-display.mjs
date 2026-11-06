@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'}),errors=[],checks=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -23,7 +23,7 @@ try {
   await (await studioControl(page,'#top-view')).click();
   await frame();const viewAfter=await page.locator('#scene canvas').evaluate(canvas=>canvas.toDataURL());assert.ok(viewAfter!==viewBefore,'back view changes the rendered image');
   await (await studioControl(page,'#angle-view')).click();
-  await page.locator('#pin-current').click();
+  await page.locator('#pin-current').click();await confirmFinishedSave(page);
   await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');
   current=await state();assert.equal(current.presentation.displayed,1);assert.equal(current.rackItems.length,1);
   await shot('display-single-desktop');
@@ -39,7 +39,7 @@ try {
 
   for(const index of [1,2,3]){
     await (await studioControl(page,`[data-index="${index}"]`)).click();
-    await page.locator('#finish:visible, #scene-finish:visible').click();await page.locator('#pin-current').click();
+    await page.locator('#finish:visible, #scene-finish:visible').click();await page.locator('#pin-current').click();await confirmFinishedSave(page);
     await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');
     await page.locator('#resume-drawing').click();
   }
@@ -73,7 +73,7 @@ try {
   // Simulate a full storage device: the finished work remains recoverable.
   await page.locator('#resume-drawing').click();await page.locator('#finish:visible, #scene-finish:visible').click();
   await page.evaluate(()=>{window.nativeOpen=indexedDB.open.bind(indexedDB);indexedDB.open=()=>{throw new DOMException('Full','QuotaExceededError');};});
-  await page.locator('#pin-current').click();assert.equal((await state()).presentation.mode,'held');assert.equal(await page.locator('#pin-current').isEnabled(),true);
+  await page.locator('#pin-current').click();await confirmFinishedSave(page);assert.equal((await state()).presentation.mode,'held');assert.equal(await page.locator('#pin-current').isEnabled(),true);
   await page.evaluate(()=>indexedDB.open=nativeOpen);
   const animated=await browser.newPage({viewport:{width:1280,height:800},reducedMotion:'no-preference'});
   animated.on('pageerror',error=>errors.push(error.message));

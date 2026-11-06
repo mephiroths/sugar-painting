@@ -10,7 +10,7 @@ export class TemplateGuide {
     this.context=this.canvas.getContext('2d',{willReadFrequently:true});
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.flipY=false;
     this.texture.minFilter=THREE.LinearMipmapLinearFilter;this.texture.magFilter=THREE.LinearFilter;
-    this.uniforms={guideMask:{value:this.texture},guideEnabled:{value:0},guideOpacity:{value:.5},guideInk:{value:new THREE.Color('#526b70')}};
+    this.uniforms={guideMask:{value:this.texture},guideEnabled:{value:0},guideOpacity:{value:.85},guideInk:{value:new THREE.Color('#291b13')}};
     this.clearMask();
   }
   clearMask() {
@@ -29,13 +29,13 @@ export class TemplateGuide {
     ctx.setTransform(sx,0,0,sy,this.canvas.width/2-50*sx,this.canvas.height/2-46*sy);
     ctx.strokeStyle='#ffffff';ctx.lineWidth=.026/(.083*pattern.scale);ctx.lineCap='round';ctx.lineJoin='round';
     for(let i=0;i<pattern.paths.length;i++){
-      ctx.globalAlpha=this.step===null||this.step===i?1:.22;
-      ctx.lineWidth=(this.step===i?.045:.026)/(.083*pattern.scale);
+      ctx.globalAlpha=this.step===null||this.step===i?1:.65;
+      ctx.lineWidth=(this.step===i?.085:.04)/(.083*pattern.scale);
       ctx.stroke(new Path2D(pattern.paths[i]));
     }
     if(this.step!==null){
       const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',pattern.paths[this.step]);
-      const start=path.getPointAtLength(0),radius=.11/(.083*pattern.scale);
+      const start=path.getPointAtLength(0),radius=.16/(.083*pattern.scale);
       ctx.globalAlpha=1;ctx.lineWidth=.025/(.083*pattern.scale);ctx.beginPath();ctx.arc(start.x,start.y,radius,0,Math.PI*2);ctx.stroke();
     }
     ctx.globalAlpha=1;

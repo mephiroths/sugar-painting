@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,studioControl,saveCurrentWork} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl,saveCurrentWork} from './browser-test.mjs';
 
 const engine=process.argv[2]||'chromium',driver=engine==='firefox'?await import('./tools/compat/node_modules/playwright/index.mjs'):undefined;
 const browser=await launchBrowser(engine,{},driver),page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'}),errors=[],checks=[];
@@ -34,9 +34,9 @@ try{
   await page.waitForFunction(()=>sugarStudio.getState().strokes===1&&!sugarStudio.getState().draining);
   await page.waitForFunction(()=>sugarStudio.getState().material.coolingCells===0);
   await page.locator('#tutorial-close').click();await frame();
-  assert.match(await page.locator('#workflow-hint').textContent(),/完成/);
+  assert.match(await page.locator('#workflow-hint').textContent(),/拿起来看看/);
   assert.equal(await page.locator('#gallery-save').evaluate(e=>e.closest('details').id),'board-menu');
-  assert.equal(await page.locator('#draft-status').isVisible(),true);
+  assert.match(await page.locator('#draft-status').textContent(),/本机|保存/);
   await page.screenshot({path:artifact('ux-paint-mobile.png')});
 
   await page.evaluate(()=>window.originalUxSurface=Array.from(sugarStudio.captureSurface()));
@@ -72,13 +72,13 @@ try{
   checks.push('Four languages and 320–1440 px layouts expose the task and save form; resizing preserves artwork and camera direction');
 
   await page.locator('#language').selectOption('zh-CN');await page.setViewportSize({width:390,height:844});await page.locator('#scene-finish').click();await frame();
-  assert.equal(await page.locator('#finish-note').isVisible(),true);assert.match(await page.locator('#finish-note').textContent(),/清空画板/);
-  assert.equal(await page.locator('#pin-current').textContent(),'保存到糖画架');
+  assert.equal(await page.locator('#finish-note').isVisible(),true);assert.match(await page.locator('#finish-note').textContent(),/清空本幅画板/);
+  assert.equal(await page.locator('#pin-current').textContent(),'保存并去糖画架');
   assert.equal(await page.locator('#resume-drawing').evaluate(e=>e.parentElement.id),'finish-actions');
   await page.screenshot({path:artifact('ux-finish-mobile.png')});
   await page.locator('#resume-drawing').click();assert.equal((await state()).strokes,1);
   await page.locator('#watch-mode').click();await page.locator('#beginner').click();assert.equal((await state()).strokes,1);assert.equal(await page.locator('#tutorial').isHidden(),true,'existing gourd draft is retained without restarting practice');
-  await page.locator('#scene-finish').click();await page.locator('#pin-current').click();await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');
+  await page.locator('#scene-finish').click();await page.locator('#pin-current').click();await confirmFinishedSave(page);await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');
   assert.equal((await state()).strokes,0);assert.equal((await state()).presentation.displayed,2);
   assert.equal(await page.locator('#finish-actions').isVisible(),false,'rack has its own actions, not the finished-work action strip');
   await page.locator('#rack-items button').first().click();assert.equal(await page.locator('#share-work').isVisible(),true);
