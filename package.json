@@ -31,6 +31,8 @@
     "verify:publication": "npm run build && node verify-publication-ux.mjs",
     "verify:import": "npm run build && node verify-pattern-import.mjs",
     "verify:axis": "npm run build && node verify-inspection-axis.mjs",
-    "verify:settings": "npm run build && node verify-settings.mjs"
+    "verify:settings": "npm run build && node verify-settings.mjs",
+    "verify:examples": "npm run build && node verify-rack-examples.mjs",
+    "verify:drawing-repair": "npm run build && node verify-drawing-repair.mjs"
   }
 }

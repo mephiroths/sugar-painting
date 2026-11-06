@@ -389,4 +389,11 @@ rows.push(
   ['体验链接已复制；发送海报，让朋友看到你的作品。','Studio link copied. Send the poster so your friend can see your artwork.','體驗連結已複製；傳送海報，讓朋友看到你的作品。','体験リンクをコピーしました。作品を見てもらうにはポスターも送ってください。'],
   ['无法自动复制，请复制已选中的链接。','Could not copy automatically. Copy the selected link.','無法自動複製，請複製已選取的連結。','自動コピーできませんでした。選択したリンクをコピーしてください。']
 );
+rows.push(
+  ['示例糖画','Sample paintings','範例糖畫','お手本の飴細工'],
+  ['我的作品','My paintings','我的作品','自分の作品'],
+  ['展示内容','Rack collection','展示內容','展示する作品'],
+  ['先赏一份甜，再亲手画一幅。','Enjoy a little sweetness, then make your own.','先賞一份甜，再親手畫一幅。','甘いお手本を眺めてから、自分でも描いてみましょう。'],
+  ['照着画这一幅','Trace this painting','照著畫這一幅','このお手本をなぞる']
+);
 export const messages = Object.fromEntries(rows.map(([source, en, traditional, ja]) => [source, {en, 'zh-TW': traditional, ja}]));

@@ -61,7 +61,7 @@ export async function inspectCurrentWork(page) {
   if(mode==='inspect')return;
   if(mode!=='rack'){
     if(await page.evaluate(()=>sugarStudio.getState().mode)==='watch'){
-      await page.locator('#finish').click();await page.locator('#pin-current').click();await confirmFinishedSave(page);
+      await (await studioControl(page,'#finish')).click();await page.locator('#pin-current').click();await confirmFinishedSave(page);
     }else{
       await saveCurrentWork(page,'过程练习');
       await page.waitForFunction(()=>document.querySelector('#toast').textContent==='已存入糖画架。');

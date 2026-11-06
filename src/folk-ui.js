@@ -5,6 +5,11 @@ import {installStudioSettings,syncStudioSettings} from './studio-settings.js';
 export const uiAssets={wood:'./assets/ui/wood-table.png',stone:'./assets/ui/marble-slab.png',copper:'./assets/ui/copper-hammered.png',display:'./assets/ui/display-backdrop.png',paper:'./assets/ui/paper-sheet.png',sign:'./assets/ui/shop-sign.png'};
 if(globalThis.__sugarOfflineAssets)for(const key of Object.keys(uiAssets))uiAssets[key]=globalThis.__sugarOfflineAssets[uiAssets[key]]||uiAssets[key];
 let rail,watchTools,ready=false;
+function positionWorkbenchHint() {
+  const picker=document.getElementById('pattern-picker'),modes=document.querySelector('.mode-switch'),hint=document.querySelector('.workbench-status');
+  const anchor=picker.getClientRects().length?picker:modes,box=anchor.getBoundingClientRect(),root=document.querySelector('.workbench').getBoundingClientRect();
+  hint.style.top=Math.round(box.bottom-root.top+10)+'px';hint.style.left=Math.max(12,Math.round(box.left-root.left))+'px';hint.style.right='24px';
+}
 export function installFolkUI({patterns,selectPattern,editWork,deleteWork}) {
   const $=id=>document.getElementById(id),workbench=document.querySelector('.workbench');
   const brand=document.querySelector('.brand');brand.replaceChildren();
@@ -18,7 +23,13 @@ export function installFolkUI({patterns,selectPattern,editWork,deleteWork}) {
     const heading=document.createElement('div');heading.className='paper-panel-heading';const title=document.createElement('h2');setText(title,()=>id==='drawing-settings'?'调节':'作品');const close=document.createElement('button');close.type='button';setText(close,()=>'关闭');close.onclick=()=>{$(id).open=false;$(id).querySelector('summary').focus();};heading.append(title,close);$(id).querySelector('.popover-body').prepend(heading);
   }
   setText($('save-work-title'),()=>'给这幅糖画起个名');
-  const cta=document.createElement('div');cta.className='watch-cta';document.querySelector('.scene-panel').append(cta);cta.append($('beginner'),$('finish'));
+  const cta=document.createElement('div');cta.className='watch-cta';document.querySelector('.scene-panel').append(cta);cta.append($('beginner'));
+  // Keep the internal completion action for existing flows, without a second homepage CTA.
+  $('finish').hidden=true;
+  const patternIcon=document.createElementNS('http://www.w3.org/2000/svg','svg');patternIcon.setAttribute('viewBox','0 0 24 24');patternIcon.setAttribute('aria-hidden','true');patternIcon.innerHTML='<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>';$('pattern-trigger').prepend(patternIcon);
+  $('pattern-trigger').setAttribute('aria-haspopup','dialog');
+  const patternPanel=$('pattern-picker').querySelector('.popover-body');patternPanel.setAttribute('role','dialog');patternPanel.setAttribute('aria-labelledby','pattern-heading');
+  const hintResize=new ResizeObserver(positionWorkbenchHint);hintResize.observe($('pattern-picker'));hintResize.observe(document.querySelector('.mode-switch'));window.addEventListener('resize',positionWorkbenchHint);
   const completionTitle=document.createElement('h2');completionTitle.className='completion-title';setText(completionTitle,()=>'先看看这份甜');$('finish-actions').prepend(completionTitle);
   const imageWork=document.createElement('button');imageWork.id='image-work';imageWork.type='button';setText(imageWork,()=>'保存图片');imageWork.onclick=()=>$('save').click();$('finish-actions').append(imageWork);
   watchTools=document.querySelector('.playback');
@@ -38,18 +49,19 @@ export function installFolkUI({patterns,selectPattern,editWork,deleteWork}) {
   setText($('template-mode'),()=>'照着画');setText($('scene-finish'),()=>'拿起来看看');
   installStudioSettings();ready=true;localize();
 }
-export function syncFolkUI(state,presentation,gallery) {
+export function syncFolkUI(state,presentation,gallery,example=false) {
   if(!ready)return;document.body.dataset.mode=state.mode;document.body.dataset.presentation=presentation||'';
   const selected=state.mode==='template'?state.templatePattern:state.pattern;
   rail.hidden=true;
   for(const button of rail.querySelectorAll('.pattern-ticket')){const i=Number(button.dataset.pattern);button.hidden=i>2;button.setAttribute('aria-pressed',String(i===selected));}
   setText(watchTools.querySelector('.pause-label'),()=>!state.playing?'已完成':state.paused?'继续浇糖':'暂停');
   for(const button of document.querySelectorAll('.speed-choices button'))button.setAttribute('aria-pressed',String(Number(button.dataset.speed)===state.speed));
-  for(const id of ['edit-inspected','delete-inspected'])document.getElementById(id).hidden=presentation!=='inspect';
+  for(const id of ['edit-inspected','delete-inspected'])document.getElementById(id).hidden=presentation!=='inspect'||(example&&id==='delete-inspected');
   document.getElementById('work-more').hidden=presentation!=='inspect';
-  document.getElementById('rack-empty-message').hidden=presentation!=='rack'||gallery.length>0;
+  document.getElementById('rack-empty-message').hidden=presentation!=='rack'||document.body.dataset.rackCollection!=='personal'||gallery.length>0;
   for(const button of document.querySelectorAll('.board-export'))button.disabled=!state.hasArtwork;
   syncStudioSettings(state,presentation);
+  positionWorkbenchHint();
 }
 export function confirmDelete(name) {
   const dialog=document.getElementById('delete-work-dialog');setText(document.getElementById('delete-work-name'),()=>name);dialog.returnValue='cancel';

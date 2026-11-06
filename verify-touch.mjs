@@ -39,7 +39,7 @@ try {
   await page.locator('#scene-finish').click();assert.equal((await state()).finished,true);assert.equal(await page.locator('#scene-undo').isVisible(),false);
   await page.locator('#resume-drawing').click();assert.equal(await page.locator('#scene-undo').isVisible(),true);
   await (await studioControl(page,'#focus-view')).click();assert.equal(await page.locator('#scene-undo').isVisible(),true);
-  await (await studioControl(page,'#focus-view')).click();await page.locator('#watch-mode').click();assert.equal(await page.locator('#scene-undo').isVisible(),false);
+  await page.locator('.focus-exit').click();await page.locator('#watch-mode').click();assert.equal(await page.locator('#scene-undo').isVisible(),false);
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({ok:true,checks:['multi-touch ignores other fingers','release drains and commits','mobile quick undo and redo','quick finish and resume','focus and watch modes','cancel commits without a stuck stroke','orientation change'],errors},null,2));
 } finally {await context.close();await browser.close();}

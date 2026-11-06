@@ -34,7 +34,8 @@ try {
   await page.locator('#rack-back').click();await manage();
   const download=page.waitForEvent('download');await page.locator('#gallery-export').click();const backup=await download;
   assert.ok(backup.suggestedFilename().endsWith('.json'));
-  page.once('dialog',dialog=>dialog.accept());await page.locator('.gallery-item').first().getByRole('button',{name:'删除',exact:true}).click();
+  await page.locator('.gallery-item').first().getByRole('button',{name:'删除',exact:true}).click();
+  await page.locator('#delete-work-dialog button[value="delete"]').click();
   await page.waitForFunction(()=>document.querySelectorAll('.gallery-item').length===2);
   await page.locator('#gallery-close').click();await page.waitForFunction(()=>sugarStudio.getState().rackItems.length===2);
   checks.push('Management supports backup and deletion, closes back to the rack, and inspect opens the actual saved 3D painting');

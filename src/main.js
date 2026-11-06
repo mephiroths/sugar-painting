@@ -36,6 +36,8 @@ let saveTimer, saveChain=Promise.resolve(), saveRevision=0, replayRecorded=false
 const dirtyWorkspaces=new Map(),draftForks=new Set(),draftCopyIds={};let draftRevisions={},draftEditSequence=0;
 const workspaceEdits=new Map(),savedWorkspaceEdits=new Map();
 let gallery=[];
+let rackExamples=null,rackCollection='examples';
+try {if(localStorage.getItem('sugar-painting-rack-collection')==='personal')rackCollection='personal';}catch { /* Optional viewing preference. */ }
 let galleryQueue=Promise.resolve();
 let galleryBusy=0,galleryFeedbackSequence=0,galleryFocus=null;
 let pendingWork=null,workSaving=false,workSavePaused=false,workSaveFocus=null;
@@ -50,17 +52,17 @@ let tutorialStep=0;
 let guideStep=0;
 let guideFinished=false;
 let guideEvaluation=null;
-let drawingPointer=null;
+let drawingPointer=null,drawingTime=0;
 let workspaceSurfaces={},strokeStartSurface=null,coolingPending=null,historySequence=0;
 const folkTextures={};
 const music=new StudioMusic(renderMusicControl);
 const sharing=createSharing(()=>{
   if(state.contextLost||videoCapture||videoStarting||(!state.hasArtwork&&!presentationMode))return null;
   if(state.drawing||state.draining)finishStroke(true);
-  const work=gallery.find(item=>item.id===selectedDisplayId);
+  const work=findDisplayedWork(selectedDisplayId);
   const pattern=patterns[work?.pattern??(state.mode==='template'?state.templatePattern:state.pattern)];
   const mode=work?.mode??state.mode;
-  return {snapshot:captureShareArtwork(),name:work?.name??t(mode==='draw'?'我的糖画':pattern.name),mode,pattern:pattern.imported?null:pattern.id,demonstration:work?.demonstration??mode==='watch'};
+  return {snapshot:captureShareArtwork(),name:(work?.builtin?t(work.name):work?.name)??t(mode==='draw'?'我的糖画':pattern.name),mode,pattern:pattern.imported?null:pattern.id,demonstration:work?.demonstration??mode==='watch'};
 },()=>notify('海报生成失败，请重试。原作品仍保留。'),()=>{state.needsRender=true;if(renderer&&!state.contextLost)renderer.render(scene,camera);});
 const raycaster = new THREE.Raycaster();
 const drawingPlane = new THREE.Plane(new THREE.Vector3(0,1,0),-.09);
@@ -114,6 +116,7 @@ function currentSurface() {if(state.drawing||state.draining)return strokeStartSu
 function restoreWorkspaceSurface() {applySurface(sugarLayer,workspaceSurfaces[workspaceKey()]);state.needsRender=true;}
 function setDraftStatus(message,failed=false) {
   setText($('draft-status'),()=>message);$('retry-save').hidden=!failed;
+  document.querySelector('.autosave-note').hidden=!failed&&!message.includes('另一页面');
 }
 function scheduleSave(key=state.mode==='watch'?null:workspaceKey(),userEdit=true) {
   if(!key)return;
@@ -198,7 +201,7 @@ async function beginVideo() {
     if(!await replaySavedWork())return;
     syncMusic();
     templateGuide.setVisible(false);
-    if($('record-format').value==='portrait')portrait=new PortraitVideo(renderer,scene,gallery.find(item=>item.id===selectedDisplayId)?.name||t('我的糖画'));
+    if($('record-format').value==='portrait')portrait=new PortraitVideo(renderer,scene,findDisplayedWork(selectedDisplayId)?.name||t('我的糖画'));
     portrait?.render();renderer.render(scene,camera);
     stream=(portrait?.canvas||renderer.domElement).captureStream(30);if(withMusic){audio=music.startRecording();if(audio)stream.addTrack(audio.track);}
     const recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:5000000});
@@ -240,7 +243,7 @@ function setWorkbenchVisible(visible) {
   syncPresentationGround();
 }
 function presentationUI() {
-  syncFolkUI(state,presentationMode,gallery);
+  syncFolkUI(state,presentationMode,gallery,!!findDisplayedWork(selectedDisplayId)?.builtin);
   const panel=document.querySelector('.scene-panel'),workbench=document.querySelector('.workbench');
   if(presentationMode){panel.dataset.presentation=presentationMode;workbench.dataset.presentation=presentationMode;}else{delete panel.dataset.presentation;delete workbench.dataset.presentation;}
   document.querySelector('.studio-panel').inert=!!presentationMode;
@@ -256,8 +259,8 @@ function presentationUI() {
   $('next-painting').hidden=presentationMode!=='held';$('next-painting').disabled=pinBusy;
   $('rack-back').hidden=presentationMode!=='inspect';$('rack-navigation').hidden=presentationMode!=='rack';
   $('rack-tools').hidden=presentationMode!=='rack';
-  const reviewing=presentationMode==='inspect'||presentationMode==='replay',work=gallery.find(item=>item.id===selectedDisplayId),canReplay=!!work?.strokes?.length;
-  setText($('edit-inspected'),()=>work?.demonstration?'打开作品':'继续修改');
+  const reviewing=presentationMode==='inspect'||presentationMode==='replay',work=findDisplayedWork(selectedDisplayId),canReplay=!!work?.strokes?.length;
+  setText($('edit-inspected'),()=>work?.builtin?'照着画这一幅':work?.demonstration?'打开作品':'继续修改');
   $('work-process').hidden=!reviewing;
   const videoParent=presentationMode==='replay'?$('work-process'):moreActions;
   if($('video-menu').parentElement!==videoParent)videoParent.append($('video-menu'));
@@ -368,15 +371,29 @@ function paintingFromWork(item) {
       return createMountedSugar({...sugarLayer,field,bounds:saved.bounds});
     }
     const temporary=new SugarLayer(new THREE.Scene());
-    try {for(const record of item.strokes||[])if(record.deposits?.length)temporary.restore(record.deposits);return createMountedSugar(temporary);}
+    try {
+      if(item.builtin){
+        let length=0;
+        const records=item.strokes.map(record=>{const curve=new THREE.CatmullRomCurve3(record.points.map(p=>v(p[0],.105,p[1])),false,'centripetal'),span=curve.getLength(),start=length;length+=span;return {curve,length:span,start};});
+        temporary.reset(records,.052);temporary.drawTo(length,false);
+      }else for(const record of item.strokes||[])if(record.deposits?.length)temporary.restore(record.deposits);
+      return createMountedSugar(temporary);
+    }
     finally {temporary.texture.dispose();temporary.mesh.geometry.dispose();temporary.material.dispose();}
   } catch(error){console.warn('展示架作品无法重建',error);return null;}
 }
-function displayedWorks() {return gallery;}
+function exampleWorks() {
+  return rackExamples??=patterns.slice(0,3).map((pattern,index)=>({id:'example-'+pattern.id,name:pattern.name,mode:'watch',pattern:index,builtin:true,demonstration:true,strokes:pattern.paths.map(path=>serializeStroke(samplePath(path,pattern.scale)))}));
+}
+function displayedWorks() {return rackCollection==='examples'?exampleWorks():gallery;}
+function findDisplayedWork(id) {return id?(gallery.find(item=>item.id===id)||exampleWorks().find(item=>item.id===id)):null;}
+function rememberRackCollection(collection) {rackCollection=collection;try{localStorage.setItem('sugar-painting-rack-collection',collection);}catch { /* Artwork storage remains independent. */ }}
+function selectRackCollection(collection) {rememberRackCollection(collection);rackPage=0;renderRack();}
 function renderRack() {
   stopSavedReplay();
   if(state.contextLost)return;if(state.drawing||state.draining)finishStroke(true);if(videoCapture)cancelVideo('打开展示架，录制已取消。');if(state.playing){state.paused=true;updateProgress();}state.navigating=false;
   disposeDisplay(inspectedSugar);inspectedSugar=null;
+  document.body.dataset.rackCollection=rackCollection;
   const works=displayedWorks(),pages=Math.max(1,Math.ceil(works.length/3));rackPage=Math.max(0,Math.min(rackPage,pages-1));
   const entries=works.slice(rackPage*3,rackPage*3+3);
   if(!rackRoot||!rackMatchesEntries(rackRoot.userData.entries,entries)){disposeDisplay(rackRoot);rackRoot=createDisplayRack(entries,paintingFromWork,folkTextures.wood);scene.add(rackRoot);}
@@ -384,9 +401,11 @@ function renderRack() {
   rackRoot.visible=true;
   if(finishedSugar)finishedSugar.visible=false;presentationMode='rack';selectedDisplayId=null;setWorkbenchVisible(false);templateGuide.setVisible(false);
   document.querySelector('.scene-panel').dataset.finished='true';syncDrawingControls();presentationUI();
-  setText($('scene-title'),()=>'我的糖画架');setText($('scene-description'),()=>works.length?'点一幅糖画，拿近慢慢看。':'把完成的糖画插在这里，留住每一份甜。');
+  setText($('scene-title'),()=>rackCollection==='examples'?'示例糖画':'我的糖画架');setText($('scene-description'),()=>rackCollection==='examples'?'先赏一份甜，再亲手画一幅。':works.length?'点一幅糖画，拿近慢慢看。':'把完成的糖画插在这里，留住每一份甜。');
+  for(const key of ['examples','personal'])$('rack-'+key).setAttribute('aria-pressed',String(rackCollection===key));
+  $('rack-empty-message').hidden=rackCollection!=='personal'||gallery.length>0;
   const list=$('rack-items');releaseTranslations(list);list.replaceChildren();
-  for(const item of entries){const button=document.createElement('button');button.type='button';button.textContent=item.name;button.dataset.workId=item.id;button.onclick=()=>inspectDisplayed(item.id);list.append(button);}
+  for(const item of entries){const button=document.createElement('button');button.type='button';if(item.builtin)setText(button,()=>item.name);else button.textContent=item.name;button.dataset.workId=item.id;button.onclick=()=>inspectDisplayed(item.id);list.append(button);}
   setText($('rack-counter'),()=>t('第 {page} / {total} 组',{page:rackPage+1,total:pages}));$('rack-prev').disabled=rackPage===0;$('rack-next').disabled=rackPage===pages-1;
   fitPresentation('angle',true);
 }
@@ -402,21 +421,21 @@ async function showRack() {
 }
 function inspectDisplayed(id) {
   stopSavedReplay();
-  const item=gallery.find(work=>work.id===id);if(!item||state.contextLost)return;
+  const item=findDisplayedWork(id);if(!item||state.contextLost)return;
   const cached=rackRoot?.userData.paintings.find(entry=>entry.id===id);
   const painting=cached?createInspectionCopy(cached.object):paintingFromWork(item);if(!painting){notify('这幅作品暂时无法展示，可以从糖画架重新打开。');return;}
   disposeDisplay(inspectedSugar);inspectedSugar=holdSugar(painting);scene.add(inspectedSugar);
   if(rackRoot)rackRoot.visible=false;if(finishedSugar)finishedSugar.visible=false;
   presentationMode='inspect';selectedDisplayId=id;syncDrawingControls();presentationUI();
   $('download-video').hidden=true;if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null;}
-  releaseTranslations($('scene-title'));$('scene-title').textContent=item.name;
+  releaseTranslations($('scene-title'));if(item.builtin)setText($('scene-title'),()=>item.name);else $('scene-title').textContent=item.name;
   setText($('scene-description'),()=>'转一转，看糖的厚薄与竹签的粘接。');fitPresentation('angle');
 }
 async function replaySavedWork() {
-  const id=selectedDisplayId,item=gallery.find(work=>work.id===id);
+  const id=selectedDisplayId,item=findDisplayedWork(id);
   if(!item?.strokes?.length||state.contextLost)return false;
   if(videoCapture)cancelVideo();
-  let strokes;try{strokes=item.strokes.map(deserializeStroke);}catch{notify('这幅作品没有制作记录');return false;}
+  let strokes;try{strokes=item.builtin?patterns[item.pattern].paths.map(path=>samplePath(path,patterns[item.pattern].scale)):item.strokes.map(deserializeStroke);}catch{notify('这幅作品没有制作记录');return false;}
   if(!savedReplay){
     const request=++replayRequest;await flushSave();
     if(request!==replayRequest||selectedDisplayId!==id||presentationMode!=='inspect'||state.contextLost)return false;
@@ -425,10 +444,11 @@ async function replaySavedWork() {
   if(inspectedSugar)inspectedSugar.visible=false;
   presentationMode='replay';setWorkbenchVisible(true);sugarLayer.mesh.visible=true;sugarLayer.uniforms.sugarContactEnabled.value=1;
   Object.assign(state,{mode:item.mode,strokes,drawing:false,draining:false,navigating:false,playing:false,paused:false,view:'pour'});
+  if(item.builtin)Object.assign(state,{pattern:item.pattern,thickness:.052});
   if(item.surface)applySurface(sugarLayer,decodeSurface(item.surface,sugarLayer.nx,sugarLayer.nz));
   renderArtwork(true,true);if(!item.surface)replaySurface=null;
   templateGuide.setVisible(false);presentationUI();moveView('pour',true);resize();
-  releaseTranslations($('scene-title'));$('scene-title').textContent=item.name;
+  releaseTranslations($('scene-title'));if(item.builtin)setText($('scene-title'),()=>item.name);else $('scene-title').textContent=item.name;
   setText($('scene-description'),()=>'回看这一幅糖画的制作过程');
   return true;
 }
@@ -469,7 +489,7 @@ function pinFinished(startNext=false,event) {
 }
 
 function displayGalleryWork(id) {
-  $('gallery').close();rackPage=Math.max(0,Math.floor(displayedWorks().findIndex(item=>item.id===id)/3));renderRack();inspectDisplayed(id);
+  rememberRackCollection('personal');$('gallery').close();rackPage=Math.max(0,Math.floor(displayedWorks().findIndex(item=>item.id===id)/3));renderRack();inspectDisplayed(id);
 }
 function openRackManagement() {
   if(state.contextLost)return;
@@ -604,7 +624,7 @@ async function submitSavedWork(event) {
   $('save-work-submit').disabled=true;$('save-work-cancel').disabled=true;$('work-name').readOnly=true;
   setText($('save-work-status'),'正在保存作品…');
   try{
-    await runGallery(async()=>{gallery=await updateGallery(items=>[item,...items.filter(work=>work.id!==item.id)]);});
+    await runGallery(async()=>{gallery=await updateGallery(items=>[item,...items.filter(work=>work.id!==item.id)]);});rememberRackCollection('personal');
     if(finishDestination){pinnedWorkId=item.id;await clearCompletedWorkspace();}
     $('save-work-dialog').close();
     if(finishDestination==='rack'){rackPage=0;renderRack();$('rack-items').querySelector('button')?.focus({preventScroll:true});notify('已插到展示架，画板已清空。');}
@@ -900,13 +920,13 @@ function advancePlayback(dt) {
 }
 function updateButtons() {
   document.body.dataset.video=videoStarting||videoCapture?'generating':videoUrl?'ready':'';
-  syncFolkUI(state,presentationMode,gallery);
+  syncFolkUI(state,presentationMode,gallery,!!findDisplayedWork(selectedDisplayId)?.builtin);
   syncDrawingControls();
   renderMusicControl();
   const playParent=document.querySelector('#board-menu .popover-body');
   if($('play').parentElement!==playParent)playParent.append($('play'));
   $('play').disabled=!state.hasArtwork;
-  $('record-video').disabled=(!selectedDisplayId||!gallery.find(item=>item.id===selectedDisplayId)?.strokes?.length)&&!videoCapture;
+  $('record-video').disabled=(!selectedDisplayId||!findDisplayedWork(selectedDisplayId)?.strokes?.length)&&!videoCapture;
   $('record-format').disabled=!!videoCapture||videoStarting;
   $('share-scene').disabled=!!videoCapture||videoStarting||state.contextLost||pinBusy||(!state.hasArtwork&&!presentationMode);
   $('share-work').disabled=!!videoCapture||videoStarting||state.contextLost||pinBusy;
@@ -929,7 +949,7 @@ function updateButtons() {
   $('clear').disabled=!state.hasArtwork;
   $('drawing-mouse-help').hidden=state.mode==='watch'||!!presentationMode;
   $('pattern-picker').hidden=state.mode==='draw';
-  if(presentationMode==='inspect'||presentationMode==='replay')setText($('process-status'),()=>videoCapture?'正在生成视频…':gallery.find(item=>item.id===selectedDisplayId)?.strokes?.length?'制作过程已随作品保存':'这幅作品没有制作记录');
+  if(presentationMode==='inspect'||presentationMode==='replay')setText($('process-status'),()=>videoCapture?'正在生成视频…':findDisplayedWork(selectedDisplayId)?.strokes?.length?'制作过程已随作品保存':'这幅作品没有制作记录');
 }
 function syncDrawingControls() {
   const editing=state.mode!=='watch'&&!presentationMode,navigating=editing&&state.navigating;
@@ -1037,8 +1057,15 @@ function commitStroke() {
   liveDeposits=[];drawCommands=[];strokeStartSurface=null;guideEvaluation=null;state.drawPoints=[];state.draining=false;state.hasArtwork=state.strokes.length>0;spoon.visible=false;updateButtons();state.needsRender=true;
   if(tutorialStep===3){if(tutorialLanded)setTutorial(4);else {setTutorial(1);notify('糖还没落到石板上，再按住一会儿。');}}
 }
+function advanceDrawing(time=performance.now(),minimum=0) {
+  if(!state.drawing&&!state.draining)return;
+  const delta=Math.max(minimum,Math.max(0,(time-drawingTime)/1000));drawingTime=Math.max(drawingTime,time);
+  if(delta)pour.step(Math.min(delta,.05));
+  state.needsRender=true;
+}
 function finishStroke(immediate=false) {
   if(!state.drawing&&!state.draining)return;
+  advanceDrawing();
   if(state.drawing)drawStop=pour.time;
   drawingPointer=null;state.drawing=false;state.draining=true;pour.flow=false;
   if(immediate===true){for(let i=0;i<100&&pour.active;i++)pour.step(1/120,false);pour.updateMesh();commitStroke();}
@@ -1089,6 +1116,7 @@ function wireUI() {
   $('record-video').onclick=beginVideo;
   $('replay-work').onclick=replaySavedWork;$('replay-back').onclick=stopSavedReplay;
   $('rack-open').onclick=showRack;$('pin-current').onclick=event=>pinFinished(false,event);$('next-painting').onclick=event=>pinFinished(true,event);$('rack-back').onclick=renderRack;
+  $('rack-examples').onclick=()=>selectRackCollection('examples');$('rack-personal').onclick=()=>selectRackCollection('personal');
   $('rack-prev').onclick=()=>{rackPage--;renderRack();};$('rack-next').onclick=()=>{rackPage++;renderRack();};
   let rackPointer=null;container.addEventListener('pointerdown',event=>{rackPointer=presentationMode==='rack'?[event.clientX,event.clientY]:null;});
   container.addEventListener('pointerup',event=>{if(!rackPointer||presentationMode!=='rack'||Math.hypot(event.clientX-rackPointer[0],event.clientY-rackPointer[1])>6){rackPointer=null;return;}rackPointer=null;const rect=container.getBoundingClientRect();cursor.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(cursor,camera);const hit=raycaster.intersectObjects(rackRoot.userData.pickTargets,false)[0];if(hit)inspectDisplayed(hit.object.userData.workId);});
@@ -1144,7 +1172,7 @@ function wireUI() {
   document.addEventListener('pointerdown',event=>{for(const menu of document.querySelectorAll('.tool-popover[open]'))if(!menu.contains(event.target))menu.open=false;});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&document.querySelector('.tool-popover[open]')){event.preventDefault();event.stopImmediatePropagation();const menu=document.querySelector('.tool-popover[open]');menu.open=false;menu.querySelector('summary').focus();}},true);
   for(const menu of document.querySelectorAll('.tool-popover'))menu.addEventListener('toggle',()=>{if(menu.open){menu.style.setProperty('--popover-top',Math.round(menu.getBoundingClientRect().bottom+8)+'px');for(const other of document.querySelectorAll('.tool-popover[open]'))if(other!==menu&&!other.contains(menu))other.open=false;}});
-  $('view-menu').addEventListener('click',event=>{const button=event.target.closest('button');if(button&&['angle-view','top-view','pour-view','detail-view','focus-view','navigate-drawing','gallery-save','clear','play','save','share-scene'].includes(button.id))$('view-menu').open=false;});
+  $('view-menu').addEventListener('click',event=>{const button=event.target.closest('button');if(button&&['angle-view','top-view','pour-view','detail-view','focus-view','navigate-drawing','gallery-save','clear','play','finish','save','share-scene'].includes(button.id))$('view-menu').open=false;});
   container.addEventListener('pointerdown',e=>{
     // Drawing pointers are handled before OrbitControls can capture them.
     // Right mouse and wheel events still reach the camera controls normally.
@@ -1155,7 +1183,9 @@ function wireUI() {
     strokeStartSurface=currentSurface();
     guideEvaluation=null;
     if(state.mode==='template'&&$('step-guide').checked&&!guideFinished&&patterns[state.templatePattern].paths.length){const pattern=patterns[state.templatePattern],points=samplePath(pattern.paths[guideStep],pattern.scale);guideEvaluation={pattern:state.templatePattern,step:guideStep,points,before:guideCoverage(points,sugarLayer)};}
-    cameraMove=null;drawingPointer=e.pointerId;state.drawing=true;state.drawPoints=[p];liveDeposits=[];drawCommands=[];pour.amount=state.thickness;pour.reset(p);pour.setTarget(p,true);drawStart=pour.time;recordDrawCommand(p,true);
+    cameraMove=null;drawingPointer=e.pointerId;drawingTime=performance.now();state.drawing=true;state.drawPoints=[p];liveDeposits=[];drawCommands=[];pour.amount=state.thickness;pour.reset(p);pour.setTarget(p,true);drawStart=pour.time;recordDrawCommand(p,true);
+    // Prime a parcel on press, including taps and swipes completed before the next frame.
+    advanceDrawing(drawingTime,1/120);
     if(tutorialStep===1)setTutorial(2);
     container.setPointerCapture(e.pointerId);container.focus({preventScroll:true});e.preventDefault();
   },true);
@@ -1165,7 +1195,7 @@ function wireUI() {
     const prev=state.drawPoints.at(-1);
     if(!pour.flow){pour.setTarget(p,true);recordDrawCommand(p,true);if(p.distanceTo(prev)<.015)return;}
     else if(p.distanceTo(prev)<.015)return;
-    state.drawPoints.push(p);pour.setTarget(p,true);recordDrawCommand(p);state.needsRender=true;
+    state.drawPoints.push(p);pour.setTarget(p,true);advanceDrawing(performance.now(),1/240);recordDrawCommand(p);state.needsRender=true;
     if(tutorialStep===2)setTutorial(3);
     if(state.drawPoints.length>1800){finishStroke(false);notify('这一笔画好了，松手后可以继续下一笔。');}
   });
@@ -1198,7 +1228,7 @@ function frame(time) {
   if(document.hidden||state.contextLost)return;
   const advancing=state.playing&&!state.paused;
   if(advancing)advancePlayback(delta*state.speed);
-  if(state.drawing||state.draining){pour.step(delta);positionSpoon();if(state.draining&&!pour.active)commitStroke();state.needsRender=true;}
+  if(state.drawing||state.draining){advanceDrawing(time);positionSpoon();if(state.draining&&!pour.active)commitStroke();state.needsRender=true;}
   if(finishedSugar&&presentationMode==='held'){const t=reducedMotion?1:Math.min(1,(time-finishStarted)/1150),lift=THREE.MathUtils.clamp((t-.18)/.82,0,1),ease=1-(1-lift)**3,mount=finishedSugar.userData.mount;finishedSugar.position.set(mount.x*(1-ease),.004+.746*ease,mount.tipZ*(1-ease));finishedSugar.rotation.x=Math.PI/2*ease;if(t>.35)setWorkbenchVisible(false);if(t<1)state.needsRender=true;}
   const movingCamera=!!cameraMove;
   if(cameraMove) {
@@ -1268,11 +1298,11 @@ async function start() { try {
   await Promise.all(['wood','stone','copper','display'].map(async key=>{const map=await loader.loadAsync(uiAssets[key]);map.colorSpace=THREE.SRGBColorSpace;folkTextures[key]=map;}));
   folkTextures.presentationBackground=folkTextures.display;
   try {await loadPatternLibrary();}catch(error){console.warn('导入图案读取失败',error);notify('无法读取本机图案，请检查浏览器存储。');}
-  makeScene();wireUI();installFolkUI({patterns,selectPattern:index=>state.mode==='template'?setTemplate(index):setPattern(index),editWork:()=>{const work=gallery.find(item=>item.id===selectedDisplayId);if(work)openGalleryWork(work);},deleteWork:()=>{const work=gallery.find(item=>item.id===selectedDisplayId);if(work)return deleteGalleryWork(work);}});
+  makeScene();wireUI();installFolkUI({patterns,selectPattern:index=>state.mode==='template'?setTemplate(index):setPattern(index),editWork:()=>{const work=findDisplayedWork(selectedDisplayId);if(work?.builtin){setMode('template');setTemplate(work.pattern);}else if(work)openGalleryWork(work);},deleteWork:()=>{const work=findDisplayedWork(selectedDisplayId);if(work&&!work.builtin)return deleteGalleryWork(work);}});
   try {
     const draft=await readDraft();
-    if(draft?.version===1){draftRevisions={...draft.revisions};state.ownStrokes=(draft.own||[]).map(deserializeStroke);state.templateStrokes=Object.fromEntries(Object.entries(draft.templates||{}).map(([key,strokes])=>[key,strokes.map(deserializeStroke)]));for(const [key,surface] of Object.entries(draft.surfaces||{})){try{workspaceSurfaces[key]=decodeSurface(surface,sugarLayer.nx,sugarLayer.nz);}catch(error){console.warn('草稿糖层不可用，已从笔画重建',error);}}setText($('draft-status'),()=>'已恢复本机草稿');}
-  } catch(error) {console.warn('草稿恢复失败',error);setText($('draft-status'),()=>'无法读取本机草稿，请检查浏览器存储');}
+    if(draft?.version===1){draftRevisions={...draft.revisions};state.ownStrokes=(draft.own||[]).map(deserializeStroke);state.templateStrokes=Object.fromEntries(Object.entries(draft.templates||{}).map(([key,strokes])=>[key,strokes.map(deserializeStroke)]));for(const [key,surface] of Object.entries(draft.surfaces||{})){try{workspaceSurfaces[key]=decodeSurface(surface,sugarLayer.nx,sugarLayer.nz);}catch(error){console.warn('草稿糖层不可用，已从笔画重建',error);}}setDraftStatus('作品已保存在本机');}
+  } catch(error) {console.warn('草稿恢复失败',error);setDraftStatus('无法读取本机草稿，请检查浏览器存储',true);}
   try {gallery=await readGallery()||[];updateCopyAccess();}catch(error){console.warn('糖画架读取失败',error);notify('无法读取糖画架，请检查浏览器存储。');}
   const initialMode=new URLSearchParams(location.search).get('mode');
   setPattern(0,!reducedMotion&&initialMode!=='template'&&initialMode!=='draw');
@@ -1284,7 +1314,7 @@ async function start() { try {
   $('loading').hidden=true;renderer.setAnimationLoop(frame);
   wireContextRecovery();
   // Read-only diagnostics used by the local interaction verification.
-  window.sugarStudio={getState:()=>({mode:state.mode,pattern:patterns[state.pattern].id,strokes:state.strokes.length,progress:state.progress,playing:state.playing,paused:state.paused,drawing:state.drawing,draining:state.draining,finished:!!presentationMode,finishedStick:!!activePresentation()?.getObjectByName('竹签'),presentation:{mode:presentationMode,framing:presentationFrame(),ground:{visible:displayGround.visible,y:displayGround.position.y,rackBaseY:rackRoot?.userData.groundBaseY??null},selected:selectedDisplayId,displayed:displayedWorks().length,page:rackPage,mount:(inspectedSugar||finishedSugar)?.userData.mount,normal:(inspectedSugar||finishedSugar)?v(0,1,0).applyQuaternion((inspectedSugar||finishedSugar).quaternion).toArray():null},rackItems:rackRoot?.userData.paintings?.map(item=>{const p=item.center.clone().project(camera),rect=container.getBoundingClientRect();return{id:item.id,x:rect.left+(p.x+1)/2*rect.width,y:rect.top+(1-p.y)/2*rect.height};})||[],view:state.view,camera:{position:camera.position.toArray(),target:controls.target.toArray()},music:music.stats(),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,material:sugarLayer.stats(),pour:pour.stats(),template:templateGuide.stats(),replay:state.playing?{applied:timeline.reduce((n,e)=>n+(e.depositIndex||0),0),total:timeline.reduce((n,e)=>n+(e.record?.deposits?.length||0),0)}:null}),captureSurface:()=>sugarLayer.field.slice(),projectPoint:(x,z)=>{camera.updateMatrixWorld();const p=v(x,.09,z).project(camera),r=container.getBoundingClientRect();return{x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};}};
+  window.sugarStudio={getState:()=>({mode:state.mode,pattern:patterns[state.pattern].id,strokes:state.strokes.length,progress:state.progress,playing:state.playing,paused:state.paused,drawing:state.drawing,draining:state.draining,finished:!!presentationMode,finishedStick:!!activePresentation()?.getObjectByName('竹签'),presentation:{mode:presentationMode,framing:presentationFrame(),ground:{visible:displayGround.visible,y:displayGround.position.y,rackBaseY:rackRoot?.userData.groundBaseY??null},selected:selectedDisplayId,displayed:gallery.length,collection:rackCollection,collectionSize:displayedWorks().length,page:rackPage,mount:(inspectedSugar||finishedSugar)?.userData.mount,normal:(inspectedSugar||finishedSugar)?v(0,1,0).applyQuaternion((inspectedSugar||finishedSugar).quaternion).toArray():null},rackItems:rackRoot?.userData.paintings?.map(item=>{const p=item.center.clone().project(camera),rect=container.getBoundingClientRect();return{id:item.id,x:rect.left+(p.x+1)/2*rect.width,y:rect.top+(1-p.y)/2*rect.height};})||[],view:state.view,camera:{position:camera.position.toArray(),target:controls.target.toArray()},music:music.stats(),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,material:sugarLayer.stats(),pour:pour.stats(),template:templateGuide.stats(),replay:state.playing?{applied:timeline.reduce((n,e)=>n+(e.depositIndex||0),0),total:timeline.reduce((n,e)=>n+(e.record?.deposits?.length||0),0)}:null}),captureSurface:()=>sugarLayer.field.slice(),projectPoint:(x,z)=>{camera.updateMatrixWorld();const p=v(x,.09,z).project(camera),r=container.getBoundingClientRect();return{x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};}};
   window.sugarStudio.getPresentationSpine=presentationSpine;
 } catch(error) {console.error(error);showError('糖画摊暂时没能开起来，请使用支持 WebGL 的浏览器刷新重试。');} }
 start();

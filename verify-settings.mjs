@@ -19,14 +19,14 @@ async function fit(ids,label){
 }
 try{
   await page.goto(pathToFileURL(fileURLToPath(new URL('./糖画铺.html',import.meta.url))).href);await page.waitForFunction(()=>window.sugarStudio);
-  assert.equal(await page.locator('.header-music').count(),0);assert.equal(await page.locator('#music-toggle').isVisible(),false);assert.equal(await page.locator('#language').isVisible(),false);
+  assert.equal(await page.locator('.header-music').count(),0);assert.equal(await page.locator('#music-toggle').isVisible(),false);assert.equal(await page.locator('#language').isVisible(),true);assert.equal(await page.locator('#view-menu #language').count(),0);
   assert.equal(await page.locator('.pattern-rail').isVisible(),false);assert.equal(await page.locator('.scene-quick-controls').isVisible(),false);
   await screenshot('settings-home-desktop');
   await page.locator('#settings-trigger').click();assert.equal(await page.locator('#music-toggle').isVisible(),true);
   const enabled=await page.locator('#music-toggle').getAttribute('aria-pressed');await page.locator('#music-toggle').click();assert.notEqual(await page.locator('#music-toggle').getAttribute('aria-pressed'),enabled);assert.equal(await page.locator('#view-menu').evaluate(e=>e.open),true);
   assert.equal(await page.locator('#thickness').isVisible(),false);assert.equal(await page.locator('#save').isVisible(),false);
   await screenshot('settings-panel-desktop');await page.keyboard.press('Escape');assert.equal(await page.locator('#settings-trigger').evaluate(e=>e===document.activeElement),true);
-  checks.push('One settings entry contains music, language, drawing, view and artwork controls; secondary groups start collapsed and Escape restores focus');
+  checks.push('Settings contains music, drawing, view and artwork controls; language stays in the header; secondary groups start collapsed and Escape restores focus');
   for(const [width,height] of [[320,568],[390,844],[768,900],[940,377],[1280,900]])for(const locale of ['zh-CN','en','zh-TW','ja']){
     await page.setViewportSize({width,height});await setStudioLocale(page,locale);await frame();
     await fit(['rack-open','settings-trigger','watch-mode','template-mode','draw-mode'],`${locale} ${width}×${height} header`);

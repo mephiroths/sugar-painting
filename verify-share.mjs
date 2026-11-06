@@ -76,7 +76,7 @@ try{
   checks.push('Poster encoding failure preserves the work and can be retried');
 
   await page.setViewportSize({width:1440,height:960});await page.locator('#watch-mode').click();await page.waitForFunction(()=>!sugarStudio.getState().playing);
-  await page.locator('#finish').click();await page.locator('#share-work').click();await poster();await page.locator('#share-close').click();assert.equal((await page.evaluate(()=>sugarStudio.getState())).presentation.mode,'held');
+  await (await studioControl(page,'#finish')).click();await page.locator('#share-work').click();await poster();await page.locator('#share-close').click();assert.equal((await page.evaluate(()=>sugarStudio.getState())).presentation.mode,'held');
   await page.locator('#pin-current').click();await confirmFinishedSave(page);await page.locator('#rack-items button').first().click();await page.locator('#share-work').click();await poster();
   const archiveLink=await page.locator('#share-link').inputValue();assert.match(archiveLink,/pattern=butterfly/);
   await page.locator('#share-close').click();assert.equal((await page.evaluate(()=>sugarStudio.getState())).presentation.mode,'inspect');checks.push('Finished work and archived work share directly while preserving their presentation');
