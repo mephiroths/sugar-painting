@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {confirmFinishedSave,launchBrowser,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl,setStudioLocale} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'}),errors=[],checks=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -55,7 +55,7 @@ try {
   for(const width of [390,320]) {
     await page.setViewportSize({width,height:844});
     for(const locale of ['zh-CN','en','zh-TW','ja']) {
-      await page.locator('#language').selectOption(locale);
+      await setStudioLocale(page,locale);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       await page.locator('#rack-items button').first().click();
       const controls=await page.evaluate(()=>{
@@ -65,9 +65,9 @@ try {
       await page.locator('#rack-back').click();
     }
   }
-  await page.setViewportSize({width:390,height:844});await page.locator('#language').selectOption('zh-CN');await shot('display-rack-mobile');
+  await page.setViewportSize({width:390,height:844});await setStudioLocale(page,'zh-CN');await shot('display-rack-mobile');
   await page.locator('#rack-items button').first().click();await shot('held-work-mobile');
-  await page.locator('#language').selectOption('en');assert.equal(await page.locator('#rack-back').innerText(),'Back to display');
+  await setStudioLocale(page,'en');assert.equal(await page.locator('#rack-back').innerText(),'Back to display');
   await page.locator('#rack-back').click();
   checks.push('Display and inspection controls fit Chinese, traditional Chinese, English and Japanese on 320px and 390px screens');
   // Simulate a full storage device: the finished work remains recoverable.

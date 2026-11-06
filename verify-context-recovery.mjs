@@ -39,7 +39,7 @@ try {
   await page.waitForFunction(()=>sugarStudio.getState().strokes===1&&!sugarStudio.getState().draining);
   await page.waitForFunction(()=>document.querySelector('#draft-status').textContent==='作品已保存在本机');
   await page.waitForTimeout(500);
-  await page.locator('#navigate-drawing').click();
+  await (await studioControl(page,'#navigate-drawing')).click();
   const before=await field(),beforePixels=await pixels();
   await lose();
   await page.waitForFunction(()=>!document.querySelector('#reload-scene').hidden);
@@ -56,7 +56,7 @@ try {
   assert.equal(await page.locator('#navigate-drawing').getAttribute('aria-pressed'),'true');
   const beforePan=await page.evaluate(()=>sugarStudio.projectPoint(0,0));await page.locator('#scene').focus();await page.keyboard.press('ArrowRight');
   const afterPan=await page.evaluate(()=>sugarStudio.projectPoint(0,0));assert.ok(Math.hypot(afterPan.x-beforePan.x,afterPan.y-beforePan.y)>2,'navigation controls recover after context restoration');
-  await page.locator('#navigate-drawing').click();
+  await (await studioControl(page,'#navigate-drawing')).click();
   await press(1,0);
   await page.evaluate(()=>{
     const original=IDBObjectStore.prototype.put;

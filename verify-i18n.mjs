@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { launchBrowser, openRackManagement, closeRackManagement ,studioControl,saveCurrentWork} from './browser-test.mjs';
+import { launchBrowser, openRackManagement, closeRackManagement ,studioControl,saveCurrentWork,setStudioLocale} from './browser-test.mjs';
 import { messages } from './src/locales.js';
 
 for (const [key, translations] of Object.entries(messages)) {
@@ -29,7 +29,7 @@ try {
     ['zh-TW','看師傅畫','選一張印記','蝶戀花'],
     ['zh-CN','看师傅画','选一张印记','蝶恋花'],
   ]) {
-    await page.locator('#language').selectOption(locale);
+    await setStudioLocale(page,locale);
     assert.equal(await page.locator('html').getAttribute('lang'), locale);
     assert.equal(await page.locator('#watch-mode').innerText(),watch);
     assert.equal(await page.locator('#pattern-heading').textContent(),heading);
@@ -38,7 +38,7 @@ try {
     assert.equal(await page.locator('#language').inputValue(),locale);
   }
   checks.push('Four locales update text, patterns, document language and accessible controls without replacing WebGL canvas');
-  await page.locator('#language').selectOption('en');
+  await setStudioLocale(page,'en');
   await (await studioControl(page,'[data-index="2"]')).click();
   await (await studioControl(page,'#step-guide')).check();
   assert.match(await page.locator('#step-label').innerText(),/^Stroke 1 \/ /);
@@ -66,7 +66,7 @@ try {
   }),true);
   assert.match(await page.locator('#step-label').innerText(),/筆目$/);
   checks.push('Switching languages preserves drawn sugar, active guide and canvas identity');
-  await page.locator('#language').selectOption('en');
+  await setStudioLocale(page,'en');
   const imageDownload=page.waitForEvent('download');
   await (await studioControl(page,'#save')).click();
   assert.equal((await imageDownload).suggestedFilename(),'Sugar-Studio-Lucky gourd-my-painting.png');
@@ -79,7 +79,7 @@ try {
   const backupDownload=page.waitForEvent('download');await page.locator('#gallery-export').click();
   assert.equal((await backupDownload).suggestedFilename(),'Sugar-Studio-backup.json');
   await closeRackManagement(page);
-  await page.locator('#language').selectOption('ja');
+  await setStudioLocale(page,'ja');
   await openRackManagement(page);
   await page.waitForFunction(()=>document.querySelector('#gallery').getAttribute('aria-busy')==='false');
   assert.equal(await page.locator('.gallery-item strong').innerText(),'蝶恋花 / My 作品');
@@ -89,13 +89,13 @@ try {
   assert.equal(await page.locator('#language').inputValue(),'ja');
   checks.push('Language persists after reload and artwork names retain their original text');
   checks.push('Image and backup exports use localized filenames; import errors use the selected language');
-  await page.locator('#language').selectOption('en');
+  await setStudioLocale(page,'en');
   await page.locator('#watch-mode').click();
   await page.screenshot({path:screenshot('i18n-desktop-en'),fullPage:true});
   for(const width of [320,390,760,900,1280]) {
     await page.setViewportSize({width,height:844});
     for(const locale of ['en','ja','zh-TW','zh-CN']) {
-      await page.locator('#language').selectOption(locale);
+      await setStudioLocale(page,locale);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`${locale} at ${width}px`);
       const headerFits=await page.evaluate(()=>[...document.querySelectorAll('.masthead a,.masthead button,.masthead select')].every(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}));
       assert.equal(headerFits,true,`header ${locale} at ${width}px`);
@@ -113,9 +113,9 @@ try {
       }
     }
   }
-  await page.setViewportSize({width:390,height:844});await page.locator('#language').selectOption('en');
+  await page.setViewportSize({width:390,height:844});await setStudioLocale(page,'en');
   await page.locator('#watch-mode').click();await page.screenshot({path:screenshot('i18n-mobile-en'),fullPage:true});
-  await page.locator('#template-mode').click();await page.locator('#language').selectOption('ja');
+  await page.locator('#template-mode').click();await setStudioLocale(page,'ja');
   await page.screenshot({path:screenshot('i18n-mobile-ja'),fullPage:true});
   checks.push('All four languages fit 320, 390, 760, 900 and 1280 pixel viewports');
   const forced=await context.newPage();await forced.goto(url+'?lang=en');await forced.waitForFunction(()=>window.sugarStudio);
@@ -125,7 +125,7 @@ try {
   await blocked.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Blocked','SecurityError');}}));
   const blockedPage=await blocked.newPage();await blockedPage.goto(url+'?lang=en');await blockedPage.waitForFunction(()=>window.sugarStudio);
   assert.equal(await blockedPage.locator('html').getAttribute('lang'),'en');
-  await blockedPage.locator('#language').selectOption('ja');assert.equal(await blockedPage.locator('html').getAttribute('lang'),'ja');
+  await setStudioLocale(blockedPage,'ja');assert.equal(await blockedPage.locator('html').getAttribute('lang'),'ja');
   await blocked.close();
   checks.push('URL language override and storage-blocked switching work');
   assert.deepEqual(errors,[]);

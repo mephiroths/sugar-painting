@@ -6,19 +6,35 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url));
 fs.mkdirSync(path.join(root,'artifacts'),{recursive:true});
 const out=path.join(root,'artifacts','flow-check.mjs');
-await build({stdin:{contents:"export {SugarPour} from './src/pour.js';export {SugarLayer} from './src/sugar-layer.js';export {positionPouringSpoon} from './src/spoon-pose.js';export {Scene,Vector3,Group,Object3D} from 'three';",resolveDir:root},outfile:out,bundle:true,platform:'node',format:'esm',alias:{three:path.join(root,'vendor/three.module.js')}});
-const {SugarPour,SugarLayer,positionPouringSpoon,Scene,Vector3,Group,Object3D}=await import(pathToFileURL(out));
+await build({stdin:{contents:"export {SugarPour} from './src/pour.js';export {SugarLayer} from './src/sugar-layer.js';export {positionPouringSpoon} from './src/spoon-pose.js';export {createPouringSpoon} from './src/spoon.js';export {Scene,Vector3,Group,MeshBasicMaterial} from 'three';",resolveDir:root},outfile:out,bundle:true,platform:'node',format:'esm',alias:{three:path.join(root,'vendor/three.module.js')}});
+const {SugarPour,SugarLayer,positionPouringSpoon,createPouringSpoon,Scene,Vector3,Group,MeshBasicMaterial}=await import(pathToFileURL(out));
 const checks=[];
 try {
-  const parent=new Group(),spoon=new Group(),cup=new Group(),lip=new Object3D();
+  const parent=new Group(),{spoon,lip}=createPouringSpoon(new MeshBasicMaterial(),new MeshBasicMaterial());
   parent.position.set(1,.3,-2);parent.rotation.y=.4;parent.scale.set(1.1,.9,1.2);
-  parent.add(spoon);spoon.add(cup);cup.rotation.z=-.27;cup.add(lip);lip.position.set(.32,.285,0);
+  parent.add(spoon);
   for(const scale of [1,2.2])for(const height of [.65,1.55,2.3])for(const gate of [0,.2,.6,1]){
     spoon.scale.setScalar(scale);const source=new Vector3(1.7,0,-.9);
     positionPouringSpoon(spoon,lip,source,height,gate);
     assert.ok(lip.getWorldPosition(new Vector3()).distanceTo(new Vector3(source.x,height,source.z))<1e-9,'stream source must stay on the transformed rim');
+    const {surface,overflow}=spoon.userData.pouring,positions=surface.geometry.attributes.position;
+    let minY=Infinity,maxY=-Infinity;
+    for(let i=0;i<positions.count;i++){
+      const y=surface.localToWorld(new Vector3().fromBufferAttribute(positions,i)).y;
+      minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+    }
+    assert.ok(maxY-minY<1e-6,'the liquid must stay horizontal while the copper bowl tilts');
+    assert.equal(overflow.visible,gate>.035,'the wet lip must stop flowing when the spoon is upright');
   }
   checks.push('Spoon rim stays anchored to the stream at every tilt, scale and pouring height');
+  checks.push('The actual spoon liquid stays level under tilt, scale and parent transforms');
+  assert.ok(lip.position.x>.35+.02,'the free thread must clear the solid outer wall of the bowl');
+  const {overflow}=spoon.userData.pouring,bridge=overflow.geometry.attributes.position;
+  const end=new Vector3();
+  for(let j=0;j<10;j++)end.add(new Vector3().fromBufferAttribute(bridge,20*11+j));
+  end.divideScalar(10);
+  assert.ok(end.distanceTo(lip.position)<1e-6,'the syrup crossing the rim must meet the free thread without a gap');
+  checks.push('Syrup crosses the rim and meets the falling thread outside the copper wall');
   const scene=new Scene(),layer=new SugarLayer(scene);let mass=0,count=0;
   const p=new SugarPour(scene,(a,b,volume,radius)=>{layer.deposit(a,b,volume,radius,true);mass+=volume;count++;});
   p.reset(new Vector3(-1,0,0));p.setTarget(new Vector3(-1,0,0),true);

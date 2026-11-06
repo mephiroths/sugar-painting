@@ -61,6 +61,18 @@ export function holdSugar(group,baseY=.75) {
   group.rotation.set(Math.PI/2,0,0);group.position.set(0,baseY,0);group.updateMatrixWorld(true);return group;
 }
 
+// Use the physical bamboo spine, independently of the artwork's silhouette
+// and any space reserved for UI beside it.
+export function sugarRotationAxis(group,bounds=new THREE.Box3().setFromObject(group)) {
+  const stick=group.getObjectByName('竹签');if(!stick)return null;
+  stick.updateWorldMatrix(true,false);
+  const half=stick.geometry.parameters.height/2;
+  const a=stick.localToWorld(new THREE.Vector3(0,-half,0)),b=stick.localToWorld(new THREE.Vector3(0,half,0));
+  const direction=b.clone().sub(a).normalize(),center=bounds.getCenter(new THREE.Vector3());
+  const pivot=a.clone().addScaledVector(direction,center.sub(a).dot(direction));
+  return {pivot,direction,a,b};
+}
+
 // Share the already uploaded geometry. Only transforms and small material
 // objects belong to the inspection view; returning must not dispose the rack.
 export function createInspectionCopy(painting) {

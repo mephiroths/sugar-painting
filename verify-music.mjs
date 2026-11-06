@@ -4,7 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,studioControl,saveCurrentWork} from './browser-test.mjs';
+import {launchBrowser,studioControl,saveCurrentWork,setStudioLocale} from './browser-test.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url)),web=path.join(root,'artifacts/vercel-site');
 const server=http.createServer((req,res)=>{const name=new URL(req.url,'http://localhost').pathname,file=path.join(web,name==='/'?'index.html':name);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',file.endsWith('.mp3')?'audio/mpeg':'text/html; charset=utf-8');res.end(fs.readFileSync(file));});
@@ -56,11 +56,11 @@ try{
   await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});await page.waitForFunction(()=>sugarStudio.getState().music.active);
   checks.push('Music-off exports stay silent; hiding the page fades and stops audio, returning resumes it');
   for(const width of [320,390,1280])for(const language of ['zh-CN','zh-TW','en','ja']){
-    await page.setViewportSize({width,height:844});await page.locator('#language').selectOption(language);await (await studioControl(page,'#music-toggle')).focus();
+    await page.setViewportSize({width,height:844});await setStudioLocale(page,language);await (await studioControl(page,'#music-toggle')).focus();
     assert.equal(await page.evaluate(()=>{const a=document.querySelector('#view-menu .popover-body').getBoundingClientRect(),b=document.querySelector('#music-toggle').getBoundingClientRect();return a.left>=0&&a.right<=innerWidth&&b.left>=a.left&&b.right<=a.right;}),true,`${width}/${language} sound control fits`);
     await page.keyboard.press('Escape');
   }
-  await page.setViewportSize({width:390,height:844});await page.locator('#language').selectOption('zh-CN');await (await studioControl(page,'#music-toggle')).focus();await page.screenshot({path:path.join(root,'artifacts/music-mobile.png')});
+  await page.setViewportSize({width:390,height:844});await setStudioLocale(page,'zh-CN');await (await studioControl(page,'#music-toggle')).focus();await page.screenshot({path:path.join(root,'artifacts/music-mobile.png')});
   const offline=await browser.newPage({reducedMotion:'reduce'});await offline.goto(pathToFileURL(path.join(root,'糖画铺.html')).href+'?mode=draw');await offline.waitForFunction(()=>window.sugarStudio);await offline.locator('#draw-mode').click();await offline.waitForFunction(()=>sugarStudio.getState().music.loaded);await offline.close();
   checks.push('The menu works in all four languages at 320/390/1280 px; the standalone HTML plays its embedded music offline');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,checks,errors},null,2));

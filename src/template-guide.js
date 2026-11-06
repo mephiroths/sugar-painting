@@ -20,11 +20,15 @@ export class TemplateGuide {
     this.pattern=pattern;this.step=null;this.drawMask();
   }
   setStep(index) {
-    this.step=index===null?null:THREE.MathUtils.clamp(index,0,this.pattern.paths.length-1);
+    this.step=index===null||!this.pattern?.paths.length?null:THREE.MathUtils.clamp(index,0,this.pattern.paths.length-1);
     this.drawMask();
   }
   drawMask() {
     const pattern=this.pattern;if(!pattern)return;this.clearMask();
+    if(pattern.kind==='image'){
+      this.context.drawImage(pattern.guideImage,0,0,this.canvas.width,this.canvas.height);
+      this.updateInk();return;
+    }
     const ctx=this.context,sx=.083*pattern.scale*this.canvas.width/this.width,sy=.083*pattern.scale*this.canvas.height/this.depth;
     ctx.setTransform(sx,0,0,sy,this.canvas.width/2-50*sx,this.canvas.height/2-46*sy);
     ctx.strokeStyle='#ffffff';ctx.lineWidth=.026/(.083*pattern.scale);ctx.lineCap='round';ctx.lineJoin='round';
@@ -39,7 +43,10 @@ export class TemplateGuide {
       ctx.globalAlpha=1;ctx.lineWidth=.025/(.083*pattern.scale);ctx.beginPath();ctx.arc(start.x,start.y,radius,0,Math.PI*2);ctx.stroke();
     }
     ctx.globalAlpha=1;
-    ctx.setTransform(1,0,0,1,0,0);const pixels=ctx.getImageData(0,0,this.canvas.width,this.canvas.height).data;
+    ctx.setTransform(1,0,0,1,0,0);this.updateInk();
+  }
+  updateInk() {
+    const pixels=this.context.getImageData(0,0,this.canvas.width,this.canvas.height).data;
     this.inkPixels=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]>20)this.inkPixels++;
     this.texture.needsUpdate=true;
   }

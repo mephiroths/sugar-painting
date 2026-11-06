@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,confirmFinishedSave} from './browser-test.mjs';
+import {launchBrowser,confirmFinishedSave,setStudioLocale,studioControl} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:320,height:568},reducedMotion:'reduce'});
 const errors=[],checks=[];page.on('pageerror',error=>errors.push(error.message));
@@ -17,13 +17,13 @@ try {
   assert.ok((await state()).template.opacity>=.8);
   assert.ok(await cameraTilt()>20&&await cameraTilt()<60,'practice starts oblique, not vertical');
   await page.locator('#draw-mode').click();assert.equal((await state()).view,'angle');assert.ok(await cameraTilt()<60,'freehand starts oblique');
-  await page.locator('#view-menu > summary').click();await page.locator('#top-view').click();assert.ok(await cameraTilt()>85,'top view remains available by choice');
+  await (await studioControl(page,'#top-view')).click();assert.ok(await cameraTilt()>85,'top view remains available by choice');
   await page.locator('#template-mode').click();assert.equal((await state()).view,'angle');assert.ok(await cameraTilt()<60);
   await page.reload();await page.waitForFunction(()=>window.sugarStudio);await page.locator('#beginner').click();assert.ok(await cameraTilt()<60,'refresh and practice restore the oblique default');
   for(const locale of ['zh-CN','zh-TW','en','ja']) {
-    await page.locator('#language').selectOption(locale);await frame();
+    await setStudioLocale(page,locale);await frame();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight&&document.documentElement.scrollWidth<=innerWidth),true,locale+' viewport');
-    for(const id of ['scene-undo','scene-redo','scene-finish','navigate-drawing','pattern-trigger']) {
+    for(const id of ['scene-undo','scene-redo','scene-finish','settings-trigger','pattern-trigger']) {
       const rect=await page.locator('#'+id).boundingBox();assert.ok(rect&&rect.y>=0&&rect.y+rect.height<=568&&rect.height>=44,locale+' '+id);
     }
     await page.locator('#pattern-trigger').click();
@@ -33,7 +33,7 @@ try {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#pattern-trigger').evaluate(e=>e===document.activeElement),true);
   }
-  await page.locator('#language').selectOption('zh-CN');
+  await setStudioLocale(page,'zh-CN');
   checks.push('320×568: four languages, no page scroll, 44px core controls, two-column pattern names, Escape focus return');
   const points=await page.evaluate(()=>[sugarStudio.projectPoint(-.6,-.4),sugarStudio.projectPoint(.6,.4)]);
   await page.mouse.move(points[0].x,points[0].y);await page.mouse.down();await page.waitForTimeout(250);
@@ -75,7 +75,7 @@ try {
   for(const [width,height] of [[320,568],[390,844],[568,320],[844,390],[1028,884],[1440,900]]) {
     await page.setViewportSize({width,height});await frame();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight),true,`${width}×${height} scrolling`);
-    for(const id of ['scene-undo','scene-finish','navigate-drawing']) {
+    for(const id of ['scene-undo','scene-finish','settings-trigger']) {
       const rect=await page.locator('#'+id).boundingBox();assert.ok(rect&&rect.x>=0&&rect.y>=0&&rect.x+rect.width<=width+.5&&rect.y+rect.height<=height+.5,`${width}×${height} ${id}`);
     }
     assert.equal(await page.evaluate(()=>{const r=document.querySelector('#scene').getBoundingClientRect();return [[-4.45,-3.68],[4.45,3.68]].every(([x,z])=>{const p=sugarStudio.projectPoint(x,z);return p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom;});}),true,`${width}×${height} board fits`);

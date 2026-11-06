@@ -11,7 +11,7 @@
     "playwright": "1.58.2"
   },
   "scripts": {
-    "check:ui": "node --check src/folk-ui.js && node --check src/spoon-pose.js && node --check build.mjs",
+    "check:ui": "node --check src/folk-ui.js && node --check src/studio-settings.js && node --check verify-settings.mjs && node --check src/spoon-pose.js && node --check src/spoon.js && node --check src/pattern-import.js && node --check src/pattern-library.js && node --check verify-pattern-import.mjs && node --check build.mjs",
     "precheck": "npm run check:ui",
     "start": "node serve.mjs",
     "build": "node build.mjs",
@@ -28,6 +28,9 @@
     "verify:display": "npm run build && node verify-display.mjs",
     "verify:share": "npm run build && node verify-share.mjs",
     "verify:ux": "npm run build && node verify-ux-flow.mjs",
-    "verify:publication": "npm run build && node verify-publication-ux.mjs"
+    "verify:publication": "npm run build && node verify-publication-ux.mjs",
+    "verify:import": "npm run build && node verify-pattern-import.mjs",
+    "verify:axis": "npm run build && node verify-inspection-axis.mjs",
+    "verify:settings": "npm run build && node verify-settings.mjs"
   }
 }

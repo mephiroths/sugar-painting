@@ -15,7 +15,7 @@ try {
   await page.waitForTimeout(700);
   const original=await page.evaluate(()=>Array.from(sugarStudio.captureSurface()));
   for(const speed of ['0.65','1.8']){
-    await (await studioControl(page,'#speed')).selectOption(speed);await (await studioControl(page,'#play')).click();
+    await (await studioControl(page,`.speed-choices button[data-speed="${speed}"]`)).click();await (await studioControl(page,'#play')).click();
     await page.waitForFunction(()=>{const s=sugarStudio.getState();return s.playing&&s.progress===1;},{timeout:20000});
     const s=await page.evaluate(()=>sugarStudio.getState());
     assert.ok(s.replay.total>0);assert.equal(s.replay.applied,s.replay.total,`all deposits must be applied at ${speed}x before surface restoration`);

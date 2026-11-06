@@ -29,10 +29,16 @@ export async function closeRackManagement(page) {
 
 // Follow the visible disclosure controls when a tool is tucked into a menu.
 export async function studioControl(page,selector) {
+  if(selector==='#undo'||selector==='#redo'){
+    const quick=page.locator(selector==='#undo'?'#scene-undo':'#scene-redo');if(await quick.isVisible())return quick;
+  }
   const control=page.locator(selector);
   const menus=await control.evaluate(element=>{const ids=[];for(let parent=element.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS'&&!parent.open)ids.unshift(parent.id);return ids;});
   for(const id of menus)await page.locator(`#${id} > summary`).click();
   return control;
+}
+export async function setStudioLocale(page,locale) {
+  await (await studioControl(page,'#language')).selectOption(locale);
 }
 
 export async function saveCurrentWork(page,name) {

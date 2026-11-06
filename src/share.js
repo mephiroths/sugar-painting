@@ -82,7 +82,7 @@ export function createSharing(capture,onError,onClose) {
     opener=event?.currentTarget instanceof HTMLElement?event.currentTarget:document.activeElement;dialog.showModal();prepare();
   }
   $('share-close').onclick=()=>dialog.close();
-  dialog.addEventListener('close',()=>{generation++;clearAsset();source=null;const menu=opener?.closest('details');(menu&&!menu.open?menu.querySelector('summary'):opener)?.focus({preventScroll:true});onClose?.();});
+  dialog.addEventListener('close',()=>{generation++;clearAsset();source=null;let focus=opener;for(let parent=opener?.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS'&&!parent.open)focus=parent.querySelector(':scope > summary');focus?.focus({preventScroll:true});onClose?.();});
   $('share-retry').onclick=()=>prepare();
   $('share-download').onclick=event=>{if(!asset)event.preventDefault();};
   $('share-native').onclick=async()=>{

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {confirmFinishedSave,launchBrowser,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl,setStudioLocale} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:1440,height:960},reducedMotion:'reduce'}),errors=[],checks=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -25,8 +25,8 @@ try{
   const saved=await draft();assert.equal(saved.own.length,1);assert.ok(saved.own[0].commands.length>1);assert.ok(saved.own[0].deposits.length>0);
   checks.push('Drawing automatically saves commands, timings and deposits without a recording button');
   await menu('drawing-settings');assert.equal(await page.locator('#thickness').isVisible(),true);
-  await page.keyboard.press('Escape');assert.equal(await page.locator('#drawing-settings').getAttribute('open'),null);
-  await menu('view-menu');await page.locator('#top-view').click();assert.equal(await page.locator('#view-menu').getAttribute('open'),null);
+  await page.keyboard.press('Escape');assert.equal(await page.locator('#view-menu').getAttribute('open'),null);
+  await (await studioControl(page,'#top-view')).click();assert.equal(await page.locator('#view-menu').getAttribute('open'),null);
   await page.locator('#scene').focus();await page.keyboard.press('q');await page.keyboard.press('w');
   await page.screenshot({path:image('studio-simplified-desktop')});
   await page.locator('#scene-finish').click();await page.locator('#pin-current').click();await confirmFinishedSave(page);
@@ -61,7 +61,7 @@ try{
   const metadata=await page.evaluate(()=>new Promise((resolve,reject)=>{const video=document.createElement('video');video.onloadedmetadata=()=>resolve({width:video.videoWidth,height:video.videoHeight});video.onerror=reject;video.src=document.querySelector('#download-video').href;}));
   assert.ok(metadata.width>0&&metadata.height>0,'exported video decodes');
   for(const [width,height] of [[320,568],[390,844],[844,390]])for(const language of ['zh-CN','zh-TW','en','ja']){
-    await page.setViewportSize({width,height});await page.locator('#language').selectOption(language);
+    await page.setViewportSize({width,height});await setStudioLocale(page,language);
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await page.locator('#download-video').scrollIntoViewIfNeeded();
     const layout=await page.evaluate(()=>{
@@ -70,21 +70,21 @@ try{
       return {noOverlap:disjoint(play,back),downloadFits:download.left>=0&&download.right<=innerWidth&&download.top>=0&&download.bottom<=innerHeight};
     });assert.equal(layout.noOverlap,true,`${width}/${language}: playback and return do not overlap`);assert.equal(layout.downloadFits,true,`${width}/${language}: download stays reachable`);
   }
-  await page.setViewportSize({width:1440,height:960});await page.locator('#language').selectOption('zh-CN');
+  await page.setViewportSize({width:1440,height:960});await setStudioLocale(page,'zh-CN');
   await page.keyboard.press('Escape');await page.locator('#replay-back').click();await (await studioControl(page,'#resume-drawing')).click();
   assert.deepEqual(await page.evaluate(()=>Array.from(sugarStudio.captureSurface())),original);
   checks.push('Video is generated on demand from the saved process and remains downloadable');
   for(const width of [320,390,768,1440]){
     await page.setViewportSize({width,height:900});
     for(const lang of ['zh-CN','zh-TW','en','ja']){
-      await page.locator('#language').selectOption(lang);
+      await setStudioLocale(page,lang);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`${width}/${lang} no horizontal overflow`);
       await menu('drawing-settings');
       assert.equal(await page.evaluate(()=>{const r=document.querySelector('#drawing-settings .popover-body').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}),true,`${width}/${lang} settings fit`);
       await page.keyboard.press('Escape');
     }
   }
-  await page.setViewportSize({width:390,height:844});await page.locator('#language').selectOption('en');
+  await page.setViewportSize({width:390,height:844});await setStudioLocale(page,'en');
   await page.screenshot({path:image('studio-simplified-mobile-en')});
   checks.push('Four languages and settings fit 320, 390, 768 and 1440 px; disclosure closes by keyboard and outside clicks');
   await page.reload();await page.waitForFunction(()=>window.sugarStudio);assert.equal((await state()).strokes,1);

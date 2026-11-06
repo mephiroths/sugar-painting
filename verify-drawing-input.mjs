@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,studioControl} from './browser-test.mjs';
+import {launchBrowser,studioControl,setStudioLocale} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'}),errors=[],checks=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -72,10 +72,10 @@ try {
   await (await studioControl(page,'.settings')).scrollIntoViewIfNeeded();
   await page.screenshot({path:fileURLToPath(new URL('./artifacts/drawing-input-desktop.png',import.meta.url))});
   for(const width of [320,390])for(const locale of ['en','ja','zh-TW','zh-CN']){
-    await page.setViewportSize({width,height:844});await page.locator('#language').selectOption(locale);
+    await page.setViewportSize({width,height:844});await setStudioLocale(page,locale);
     assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.settings .setting-row')].every(row=>{const rect=row.getBoundingClientRect();return [...row.children].every(child=>{const box=child.getBoundingClientRect();return box.left>=rect.left-1&&box.right<=rect.right+1;});})),true,`${locale} shortcut controls fit ${width}px`);
   }
-  await page.locator('#language').selectOption('en');await (await studioControl(page,'.settings')).scrollIntoViewIfNeeded();
+  await setStudioLocale(page,'en');await (await studioControl(page,'.settings')).scrollIntoViewIfNeeded();
   await page.screenshot({path:fileURLToPath(new URL('./artifacts/drawing-input-mobile-en.png',import.meta.url))});
   assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,checks,errors},null,2));
 } finally {await browser.close();}

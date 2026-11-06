@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {confirmFinishedSave,launchBrowser,studioControl,saveCurrentWork} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl,saveCurrentWork,setStudioLocale} from './browser-test.mjs';
 
 const engine=process.argv[2]||'chromium',driver=engine==='firefox'?await import('./tools/compat/node_modules/playwright/index.mjs'):undefined;
 const browser=await launchBrowser(engine,{},driver),page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'}),errors=[],checks=[];
@@ -18,11 +18,11 @@ try{
   assert.equal(await page.locator('#beginner').textContent(),'我也来画');
   assert.equal(await page.locator('#pattern-picker').evaluate(e=>e.contains(document.querySelector('#beginner'))),false);
   for(const lang of ['zh-CN','zh-TW','en','ja'])for(const width of [320,390]){
-    await page.locator('#language').selectOption(lang);await page.setViewportSize({width,height:844});await frame();
+    await setStudioLocale(page,lang);await page.setViewportSize({width,height:844});await frame();
     assert.ok((await page.locator('#pattern-trigger').boundingBox()).width>=110,`${lang}/${width}: pattern entrance cannot collapse`);
     assert.equal(await page.locator('#beginner').evaluate(e=>{const rect=e.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth&&rect.bottom<=innerHeight;}),true);
   }
-  await page.locator('#language').selectOption('zh-CN');await page.setViewportSize({width:390,height:844});await frame();
+  await setStudioLocale(page,'zh-CN');await page.setViewportSize({width:390,height:844});await frame();
   await page.screenshot({path:artifact('ux-watch-mobile.png')});
   await page.locator('#beginner').click();
   assert.equal((await state()).mode,'template');assert.equal((await state()).template.pattern,'gourd');
@@ -62,7 +62,7 @@ try{
   const after=await page.evaluate(()=>{const rect=document.querySelector('#scene').getBoundingClientRect(),p=sugarStudio.projectPoint(0,0);return[(p.x-rect.left)/rect.width,(p.y-rect.top)/rect.height];});
   assert.ok(Math.abs(after[0]-center[0])<.01&&Math.abs(after[1]-center[1])<.01,'resizing preserves camera intent after a round trip');
   for(const lang of ['zh-CN','zh-TW','en','ja'])for(const width of [320,390,768,1440]){
-    await page.setViewportSize({width,height:900});await page.locator('#language').selectOption(lang);await frame();
+    await page.setViewportSize({width,height:900});await setStudioLocale(page,lang);await frame();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`${lang}/${width} overflow`);
     await (await studioControl(page,'#gallery-save')).click();
     assert.equal(await page.locator('#save-work-dialog').evaluate(d=>d.scrollWidth<=d.clientWidth),true);
@@ -71,7 +71,7 @@ try{
   }
   checks.push('Four languages and 320–1440 px layouts expose the task and save form; resizing preserves artwork and camera direction');
 
-  await page.locator('#language').selectOption('zh-CN');await page.setViewportSize({width:390,height:844});await page.locator('#scene-finish').click();await frame();
+  await setStudioLocale(page,'zh-CN');await page.setViewportSize({width:390,height:844});await page.locator('#scene-finish').click();await frame();
   assert.equal(await page.locator('#finish-note').isVisible(),true);assert.match(await page.locator('#finish-note').textContent(),/清空本幅画板/);
   assert.equal(await page.locator('#pin-current').textContent(),'保存并去糖画架');
   assert.equal(await page.locator('#resume-drawing').evaluate(e=>e.parentElement.id),'finish-actions');

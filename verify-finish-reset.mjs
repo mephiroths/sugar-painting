@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {confirmFinishedSave,launchBrowser,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl,setStudioLocale} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'}),errors=[],checks=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -16,7 +16,7 @@ async function drawStroke() {
 async function assertEmpty() {
   const current=await state();assert.equal(current.strokes,0);assert.equal(current.material.volume,0);assert.equal(current.progress,0);
   assert.equal(await page.evaluate(()=>sugarStudio.captureSurface().every(value=>value===0)),true);
-  assert.equal(await page.locator('#undo').isDisabled(),true);assert.equal(await page.locator('#redo').isDisabled(),true);
+  assert.equal(await page.locator('#scene-undo').isDisabled(),true);assert.equal(await page.locator('#scene-redo').isDisabled(),true);
   assert.equal(await page.locator('#play').isDisabled(),true);assert.equal(await page.locator('#scene-finish').isDisabled(),true);
 }
 try {
@@ -49,13 +49,13 @@ try {
   await page.reload();await page.waitForFunction(()=>window.sugarStudio);await page.locator('#template-mode').click();await (await studioControl(page,'[data-index="2"]')).click();await assertEmpty();
   await page.setViewportSize({width:320,height:844});await drawStroke();await page.locator('#scene-finish').click();
   for(const locale of ['zh-CN','en','zh-TW','ja']) {
-    await page.locator('#language').selectOption(locale);
+    await setStudioLocale(page,locale);
     const fits=await page.evaluate(()=>{
       const panel=document.querySelector('#finish-actions').getBoundingClientRect(),scene=document.querySelector('#scene').getBoundingClientRect(),buttons=[...document.querySelectorAll('#finish-actions button')].filter(e=>e.getClientRects().length),rects=buttons.map(e=>e.getBoundingClientRect());
       return panel.left>=0&&panel.right<=innerWidth&&panel.bottom<=scene.bottom&&buttons.every((e,i)=>rects[i].left>=panel.left&&rects[i].right<=panel.right&&rects[i].bottom<=panel.bottom&&e.scrollWidth<=e.clientWidth)&&rects.every((a,i)=>rects.slice(i+1).every(b=>a.right<=b.left+.5||b.right<=a.left+.5||a.bottom<=b.top+.5||b.bottom<=a.top+.5));
     });assert.equal(fits,true,`${locale} completion actions fit 320px`);
   }
-  await page.locator('#language').selectOption('zh-CN');
+  await setStudioLocale(page,'zh-CN');
   await page.locator('#scene').scrollIntoViewIfNeeded();
   await page.screenshot({path:fileURLToPath(new URL('./artifacts/finish-reset-actions-mobile.png',import.meta.url))});
   checks.push('Template sugar, guide progress and undo history reset; other unfinished boards stay intact; four-language actions fit 320px');

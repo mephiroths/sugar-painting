@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {launchBrowser,studioControl,saveCurrentWork} from './browser-test.mjs';
+import {launchBrowser,studioControl,saveCurrentWork,setStudioLocale} from './browser-test.mjs';
 
 const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'}),errors=[],checks=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -39,7 +39,7 @@ try {
   await page.locator('#gallery-close').click();await page.waitForFunction(()=>sugarStudio.getState().rackItems.length===2);
   checks.push('Management supports backup and deletion, closes back to the rack, and inspect opens the actual saved 3D painting');
   for(const locale of ['en','ja','zh-TW','zh-CN']){
-    await page.setViewportSize({width:320,height:844});await page.locator('#language').selectOption(locale);await page.locator('#scene').scrollIntoViewIfNeeded();
+    await page.setViewportSize({width:320,height:844});await setStudioLocale(page,locale);await page.locator('#scene').scrollIntoViewIfNeeded();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     assert.equal(await page.locator('#rack-manage').isVisible(),true);
     await manage();assert.equal((await page.locator('#gallery-title').innerText()).includes('作品簿'),false);await page.locator('#gallery-close').click();

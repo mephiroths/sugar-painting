@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {confirmFinishedSave,launchBrowser,studioControl} from './browser-test.mjs';
+import {confirmFinishedSave,launchBrowser,studioControl,setStudioLocale} from './browser-test.mjs';
 import {experienceUrl,shareFilename} from './src/share.js';
 
 for(const href of ['file:///tmp/studio.html','http://localhost:5177/','http://192.168.1.2/','http://127.0.0.1/','http://10.0.0.2/','http://172.16.0.1/','http://[::1]/'])assert.equal(experienceUrl(href,'en','draw'),null);
@@ -60,7 +60,7 @@ try{
   await page.locator('#share-close').click();checks.push('Hosted link strips unrelated parameters and restores the selected template; native file share preserves click activation; cancel, permission denial and clipboard denial have usable recovery');
 
   for(const lang of ['zh-CN','zh-TW','ja','en']){
-    await page.locator('#language').selectOption(lang);await openViewShare();
+    await setStudioLocale(page,lang);await openViewShare();
     assert.equal(await page.locator('#share-native').isDisabled(),false);
     const missing=await page.evaluate(()=>[...document.querySelectorAll('#share-dialog button, #share-dialog label, #share-intro, #share-link-note')].filter(e=>e.getClientRects().length).filter(e=>document.documentElement.lang==='en'&&/[\u3400-\u9fff]/.test(e.textContent)).map(e=>e.textContent));assert.deepEqual(missing,[]);
     await page.locator('#share-close').click();

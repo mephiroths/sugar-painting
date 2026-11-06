@@ -37,6 +37,24 @@ async function write(key, value) {
 }
 
 export const readDraft = () => read('current');
+export const readImportedPatterns = () => read('patterns');
+export async function addImportedPattern(pattern) {
+  const db=await openDatabase();
+  try {
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE),request=store.get('patterns');let next,failure;
+      request.onsuccess=()=>{
+        try {
+          const current=request.result||[];if(!Array.isArray(current))throw new Error('图案数据不正确。');
+          if(current.some(item=>item.id===pattern.id)){next=current;return;}
+          if(current.length>=32)throw new Error('已保存 32 张导入图案，暂时无法继续添加。');
+          next=[...current,pattern];store.put(next,'patterns');
+        } catch(error){failure=error;tx.abort();}
+      };
+      tx.oncomplete=()=>resolve(next);tx.onerror=()=>reject(failure||tx.error);tx.onabort=()=>reject(failure||tx.error||new Error('图案保存失败。'));
+    });
+  } finally{db.close();}
+}
 function revision(record,key) {
   const value=record?.revisions?.[key];return Number.isSafeInteger(value)&&value>=0?value:0;
 }
