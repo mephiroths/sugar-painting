@@ -32,6 +32,10 @@ export function installFolkUI({patterns,selectPattern,editWork,deleteWork}) {
   const hintResize=new ResizeObserver(positionWorkbenchHint);hintResize.observe($('pattern-picker'));hintResize.observe(document.querySelector('.mode-switch'));window.addEventListener('resize',positionWorkbenchHint);
   const completionTitle=document.createElement('h2');completionTitle.className='completion-title';setText(completionTitle,()=>'先看看这份甜');$('finish-actions').prepend(completionTitle);
   const imageWork=document.createElement('button');imageWork.id='image-work';imageWork.type='button';setText(imageWork,()=>'保存图片');imageWork.onclick=()=>$('save').click();$('finish-actions').append(imageWork);
+  const finishMore=document.createElement('details');finishMore.id='finish-more';finishMore.className='tool-popover';
+  const finishSummary=document.createElement('summary');setText(finishSummary,'更多操作');
+  const finishOptions=document.createElement('div');finishOptions.className='popover-body';finishMore.append(finishSummary,finishOptions);$('finish-actions').append(finishMore);finishOptions.append($('next-painting'),imageWork);
+  finishMore.addEventListener('click',event=>{if(event.target.closest('button'))finishMore.open=false;});
   watchTools=document.querySelector('.playback');
   const pauseLabel=document.createElement('span');pauseLabel.className='pause-label';pauseLabel.id='pause-label';watchTools.insertBefore(pauseLabel,watchTools.children[1]);
   const replay=document.createElement('button');replay.className='watch-replay';replay.type='button';setText(replay,()=>'重播');replay.onclick=()=>$(document.body.dataset.presentation==='replay'?'replay-work':'play').click();watchTools.append(replay);
@@ -48,6 +52,7 @@ export function installFolkUI({patterns,selectPattern,editWork,deleteWork}) {
   $('work-process').addEventListener('click',event=>{if(event.target.closest('button'))more.open=false;});
   setText($('template-mode'),()=>'照着画');setText($('scene-finish'),()=>'拿起来看看');
   installStudioSettings();ready=true;localize();
+  $('rack-tools').prepend(document.querySelector('.rack-collections'));
 }
 export function syncFolkUI(state,presentation,gallery,example=false) {
   if(!ready)return;document.body.dataset.mode=state.mode;document.body.dataset.presentation=presentation||'';
@@ -58,6 +63,7 @@ export function syncFolkUI(state,presentation,gallery,example=false) {
   for(const button of document.querySelectorAll('.speed-choices button'))button.setAttribute('aria-pressed',String(Number(button.dataset.speed)===state.speed));
   for(const id of ['edit-inspected','delete-inspected'])document.getElementById(id).hidden=presentation!=='inspect'||(example&&id==='delete-inspected');
   document.getElementById('work-more').hidden=presentation!=='inspect';
+  document.getElementById('finish-more').hidden=presentation!=='held';
   document.getElementById('rack-empty-message').hidden=presentation!=='rack'||document.body.dataset.rackCollection!=='personal'||gallery.length>0;
   for(const button of document.querySelectorAll('.board-export'))button.disabled=!state.hasArtwork;
   syncStudioSettings(state,presentation);

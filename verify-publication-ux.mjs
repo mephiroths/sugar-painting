@@ -48,7 +48,7 @@ try {
   await page.keyboard.press('Escape');assert.equal((await state()).strokes,1);
   await page.locator('#resume-drawing').click();assert.equal((await state()).strokes,1);assert.equal((await state()).view,'angle');assert.ok(await cameraTilt()<60);
   checks.push('First stroke suggests continuing; undo/redo work; preview and cancelled naming preserve the editable drawing');
-  await page.locator('#scene-finish').click();await page.locator('#next-painting').click();
+  await page.locator('#scene-finish').click();await (await studioControl(page,'#next-painting')).click();
   await page.evaluate(()=>{const original=IDBObjectStore.prototype.put;window.restoreTestWrite=()=>IDBObjectStore.prototype.put=original;IDBObjectStore.prototype.put=function(value,key){if(key==='gallery')throw new DOMException('test','QuotaExceededError');return original.call(this,value,key);};});
   await confirmFinishedSave(page,'发布验收');
   assert.match(await page.locator('#save-work-status').textContent(),/空间不足/);

@@ -1,6 +1,14 @@
 // Chinese source copy is the stable key. Add a row here to translate new UI copy.
 // User artwork names and saved drawing data are never translated.
 const rows = [
+  ['恢复上一幅草稿','Restore previous draft','復原上一幅草稿','前の下書きを復元'],
+  ['上一幅草稿已恢复。','Previous draft restored.','上一幅草稿已復原。','前の下書きを復元しました。'],
+  ['已开始新作，上一幅草稿已保留。','New painting started. The previous draft is kept.','已開始新作，上一幅草稿已保留。','新しい作品を始めました。前の下書きは残っています。'],
+  ['开始新作失败，原画仍保留。请重试。','Could not start a new painting. Your draft is safe. Try again.','開始新作失敗，原畫仍保留。請重試。','新しい作品を始められませんでした。下書きはそのままです。もう一度お試しください。'],
+  ['草稿恢复失败，当前画板仍保留。','Could not restore the draft. Your current painting is safe.','草稿復原失敗，目前畫板仍保留。','下書きを復元できませんでした。現在の作品はそのままです。'],
+  ['另一页面已更新草稿，请刷新后再开始新作。','Another tab updated this draft. Refresh before starting a new painting.','另一頁面已更新草稿，請重新整理後再開始新作。','別のタブで下書きが更新されました。再読み込みしてから新しい作品を始めてください。'],
+  ['没有可恢复的草稿。','No previous draft to restore.','沒有可復原的草稿。','復元できる下書きがありません。'],
+  ['左右拖动旋转，滚轮或双指缩放。','Drag left or right to turn. Scroll or pinch to zoom.','左右拖動旋轉，滾輪或雙指縮放。','左右にドラッグして回転。ホイールやピンチで拡大縮小。'],
   ['返回绘画','Back to drawing','返回繪畫','描画に戻る'],
   ['设置','Settings','設定','設定'],
   ['关闭设置','Close settings','關閉設定','設定を閉じる'],

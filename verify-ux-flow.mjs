@@ -25,6 +25,7 @@ try{
   await setStudioLocale(page,'zh-CN');await page.setViewportSize({width:390,height:844});await frame();
   await page.screenshot({path:artifact('ux-watch-mobile.png')});
   await page.locator('#beginner').click();
+  await page.waitForFunction(()=>sugarStudio.getState().mode==='template'&&!document.querySelector('#scene').inert);
   assert.equal((await state()).mode,'template');assert.equal((await state()).template.pattern,'gourd');
   assert.equal(await page.locator('#pattern-current').textContent(),'图案：福禄葫芦');
   assert.equal(await page.locator('#tutorial').evaluate(e=>e.getBoundingClientRect().bottom<=document.querySelector('#scene').getBoundingClientRect().top),true,'practice never covers the board');
@@ -77,7 +78,9 @@ try{
   assert.equal(await page.locator('#resume-drawing').evaluate(e=>e.parentElement.id),'finish-actions');
   await page.screenshot({path:artifact('ux-finish-mobile.png')});
   await page.locator('#resume-drawing').click();assert.equal((await state()).strokes,1);
-  await page.locator('#watch-mode').click();await page.locator('#beginner').click();assert.equal((await state()).strokes,1);assert.equal(await page.locator('#tutorial').isHidden(),true,'existing gourd draft is retained without restarting practice');
+  await page.locator('#watch-mode').click();await page.locator('#beginner').click();await page.waitForFunction(()=>sugarStudio.getState().mode==='template'&&!document.querySelector('#scene').inert);
+  assert.equal((await state()).strokes,0);assert.equal(await page.locator('#tutorial').isVisible(),true,'practice starts blank with its first instruction');
+  await (await studioControl(page,'#restore-previous-draft')).click();await page.waitForFunction(()=>sugarStudio.getState().strokes===1&&!document.querySelector('#scene').inert);
   await page.locator('#scene-finish').click();await page.locator('#pin-current').click();await confirmFinishedSave(page);await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack');
   assert.equal((await state()).strokes,0);assert.equal((await state()).presentation.displayed,2);
   assert.equal(await page.locator('#finish-actions').isVisible(),false,'rack has its own actions, not the finished-work action strip');
@@ -88,7 +91,7 @@ try{
   await frame();assert.ok(await sceneColors()>4,'closing sharing restores the rendered work');
   await page.keyboard.press('Escape');assert.equal((await state()).presentation.mode,'rack');
   await page.keyboard.press('Escape');assert.equal((await state()).presentation.mode,null);
-  checks.push('Finish explains save-and-clear behavior; return preserves the board; restart keeps an existing draft; saved work remains shareable');
+  checks.push('Finish explains save-and-clear behavior; return preserves the board; fresh practice retains the previous draft for recovery; saved work remains shareable');
   assert.deepEqual(errors,[]);const result={ok:true,engine,checks,errors};fs.writeFileSync(artifact('ux-flow-verification.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 }catch(error){const diagnostics=await page.evaluate(()=>({state:window.sugarStudio?.getState(),focus:document.activeElement?.id})).catch(()=>null);fs.writeFileSync(artifact('ux-flow-verification.json'),JSON.stringify({ok:false,engine,checks,errors,error:String(error),diagnostics},null,2));await page.screenshot({path:artifact('ux-flow-failure.png')}).catch(()=>{});throw error;}
 finally{await browser.close();}

@@ -37,6 +37,43 @@ async function write(key, value) {
 }
 
 export const readDraft = () => read('current');
+export const readPreviousDraft = key => read('previous:'+key);
+
+// Starting a new painting and retaining the previous one are a single commit.
+// A failed write leaves both the active draft and its recovery copy untouched.
+async function replaceWorkspace(key,expected,restore) {
+  if(key!=='draw'&&!/^template:\d+$/.test(key))throw new Error('草稿画板不正确');
+  const db=await openDatabase();
+  try {
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
+      const currentRequest=store.get('current'),previousRequest=store.get('previous:'+key);
+      let current,previous,currentReady=false,previousReady=false,result,failure;
+      const commit=()=>{
+        if(!currentReady||!previousReady)return;
+        try {
+          if(current&&current.version!==1)throw new Error('草稿版本不兼容');
+          if(revision(current,key)!==expected)throw new Error('另一页面已更新草稿，请刷新后再开始新作。');
+          const index=key.slice(9),strokes=key==='draw'?current?.own||[]:current?.templates?.[index]||[];
+          const outgoing={version:1,workspace:key,updatedAt:Date.now(),strokes,surface:current?.surfaces?.[key]??null};
+          if(restore&&(!previous||previous.version!==1||!Array.isArray(previous.strokes)||!previous.strokes.length))throw new Error('没有可恢复的草稿。');
+          const incoming=restore?previous:{strokes:[],surface:null};
+          const next={...current,version:1,updatedAt:Date.now(),own:current?.own||[],templates:{...current?.templates},surfaces:{...current?.surfaces},revisions:{...current?.revisions}};
+          if(key==='draw')next.own=incoming.strokes;else next.templates[index]=incoming.strokes;
+          next.surfaces[key]=incoming.surface;next.revisions[key]=revision(current,key)+1;
+          if(restore||strokes.length){store.put(outgoing,'previous:'+key);previous=outgoing;}
+          store.put(next,'current');
+          result={revision:next.revisions[key],strokes:incoming.strokes,surface:incoming.surface,previousAvailable:!!previous?.strokes?.length};
+        }catch(error){failure=error;tx.abort();}
+      };
+      currentRequest.onsuccess=()=>{current=currentRequest.result;currentReady=true;commit();};
+      previousRequest.onsuccess=()=>{previous=previousRequest.result;previousReady=true;commit();};
+      tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(failure||tx.error);tx.onabort=()=>reject(failure||tx.error||new Error('草稿保存中断'));
+    });
+  }finally{db.close();}
+}
+export const startNewDraft = (key,expected) => replaceWorkspace(key,expected,false);
+export const restorePreviousDraft = (key,expected) => replaceWorkspace(key,expected,true);
 export const readImportedPatterns = () => read('patterns');
 export async function addImportedPattern(pattern) {
   const db=await openDatabase();

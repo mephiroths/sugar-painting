@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {createSugarSolid} from './sugar-solid.js';
+import {getStudioPalette} from './studio-palette.js';
 
 const up=new THREE.Vector3(0,1,0);
 
@@ -61,6 +62,19 @@ export function holdSugar(group,baseY=.75) {
   group.rotation.set(Math.PI/2,0,0);group.position.set(0,baseY,0);group.updateMatrixWorld(true);return group;
 }
 
+// A pale viewing stage needs enough amber body color for the thinnest lines.
+// Change only the inspection copy's optics, never the stored height field.
+export function styleInspectionSugar(group) {
+  const palette=getStudioPalette();
+  group.traverse(object=>{
+    if(object.name!=='凝固的糖画')return;
+    object.material.color.set(palette.sugar);object.material.transmission=.42;
+    object.material.attenuationColor.set(palette.absorption);object.material.attenuationDistance=.025;
+    object.material.envMapIntensity=1.05;object.material.specularIntensity=.65;
+  });
+  return group;
+}
+
 // Use the physical bamboo spine, independently of the artwork's silhouette
 // and any space reserved for UI beside it.
 export function sugarRotationAxis(group,bounds=new THREE.Box3().setFromObject(group)) {
@@ -89,7 +103,7 @@ export function createInspectionCopy(painting) {
     object.material=Array.isArray(object.material)?object.material.map(duplicate):duplicate(object.material);
     if(object.name==='凝固的糖画'&&appearance){object.material.color.setHex(appearance.color);object.material.transmission=appearance.transmission;object.material.attenuationDistance=appearance.attenuationDistance;}
   });
-  return holdSugar(copy);
+  return holdSugar(styleInspectionSugar(copy));
 }
 
 export function rackMatchesEntries(previous,next) {
@@ -118,25 +132,23 @@ export function disposeDisplay(group) {
 }
 
 // Three physical sockets per page keep small screens and GPU memory bounded.
-export function createDisplayRack(entries,makePainting,woodTexture=null) {
+export function createDisplayRack(entries,makePainting) {
   const group=new THREE.Group();group.name='糖画展示架';
-  const map=woodTexture?.clone();if(map){map.repeat.set(1,1);map.needsUpdate=true;}
-  const wood=new THREE.MeshStandardMaterial({color:map?'#bb9672':'#75472c',map,roughness:.8}),edge=new THREE.MeshStandardMaterial({color:'#a67b4b',roughness:.7});
-  const base=mesh(group,new THREE.BoxGeometry(7.4,.5,1.45),wood);base.position.y=.45;
-  for(const x of [-3.53,3.53]){const post=mesh(group,new THREE.BoxGeometry(.27,1.85,.5),wood);post.position.set(x,1.12,.1);}
-  for(const x of [-2.8,2.8]){const foot=mesh(group,new THREE.BoxGeometry(.55,.22,1.8),edge);foot.position.set(x,.09,0);}
+  const palette=getStudioPalette(),wood=new THREE.MeshStandardMaterial({color:palette.stand,roughness:.9}),edge=new THREE.MeshStandardMaterial({color:palette.standEdge,roughness:.85});
+  const base=mesh(group,new THREE.BoxGeometry(7.4,.28,1.25),wood);base.position.y=.25;
+  for(const x of [-2.8,2.8]){const foot=mesh(group,new THREE.BoxGeometry(.5,.14,1.5),edge);foot.position.set(x,.07,0);}
   const sockets=[-2.4,0,2.4];
   for(const x of sockets){
-    const hole=mesh(group,new THREE.CylinderGeometry(.095,.095,.014,24),new THREE.MeshStandardMaterial({color:'#261a12',roughness:1}));hole.position.set(x,.707,0);
-    const rim=mesh(group,new THREE.TorusGeometry(.10,.018,6,24),edge);rim.rotation.x=Math.PI/2;rim.position.set(x,.714,0);
+    const hole=mesh(group,new THREE.CylinderGeometry(.095,.095,.014,24),new THREE.MeshStandardMaterial({color:'#70563b',roughness:1}));hole.position.set(x,.397,0);
+    const rim=mesh(group,new THREE.TorusGeometry(.10,.018,6,24),edge);rim.rotation.x=Math.PI/2;rim.position.set(x,.404,0);
   }
   const paintings=[],pickTargets=[];
   entries.forEach((entry,index)=>{
     const painting=makePainting(entry);if(!painting)return;
-    painting.traverse(object=>{if(object.name==='凝固的糖画'){painting.userData.sugarAppearance={color:object.material.color.getHex(),transmission:object.material.transmission,attenuationDistance:object.material.attenuationDistance};object.material.color.set('#b67623');object.material.transmission=.7;object.material.attenuationDistance=.04;}});
+    painting.traverse(object=>{if(object.name==='凝固的糖画')painting.userData.sugarAppearance={color:object.material.color.getHex(),transmission:object.material.transmission,attenuationDistance:object.material.attenuationDistance};});styleInspectionSugar(painting);
     holdSugar(painting,0);const bounds=new THREE.Box3().setFromObject(painting),size=bounds.getSize(new THREE.Vector3());
     const scale=Math.min(4.9/Math.max(.1,size.y),2.05/Math.max(.1,size.x));painting.scale.setScalar(scale);
-    painting.position.set(sockets[index],.61,0);painting.userData.workId=entry.id;group.add(painting);
+    painting.position.set(sockets[index],.30,0);painting.userData.workId=entry.id;group.add(painting);
     painting.updateMatrixWorld(true);
     const shown=new THREE.Box3().setFromObject(painting),shownSize=shown.getSize(new THREE.Vector3()),center=shown.getCenter(new THREE.Vector3());
     const target=mesh(group,new THREE.PlaneGeometry(Math.max(.45,shownSize.x+.14),shownSize.y),new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,transparent:true,opacity:0,side:THREE.DoubleSide}));

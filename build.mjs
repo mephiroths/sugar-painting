@@ -4,7 +4,7 @@ import * as esbuild from 'esbuild';
 import {fileURLToPath} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const result=await esbuild.build({entryPoints:[path.join(root,'src/main.js')],bundle:true,write:false,minify:true,format:'iife',platform:'browser',target:'es2022',alias:{'three/addons':path.join(root,'vendor'),'three':path.join(root,'vendor/three.module.js')},legalComments:'inline'});
-const css=fs.readFileSync(path.join(root,'tokens.css'),'utf8')+'\n'+fs.readFileSync(path.join(root,'style.css'),'utf8').replace(/^@import.*$/gm,'')+'\n'+fs.readFileSync(path.join(root,'folk.css'),'utf8');
+const css=fs.readFileSync(path.join(root,'tokens.css'),'utf8')+'\n'+fs.readFileSync(path.join(root,'style.css'),'utf8').replace(/^@import.*$/gm,'')+'\n'+fs.readFileSync(path.join(root,'folk.css'),'utf8')+'\n'+fs.readFileSync(path.join(root,'studio-theme.css'),'utf8');
 const webJs=result.outputFiles[0].text.replace(/<\/script/gi,'<\\/script');
 const musicPath=path.join(root,'assets/pouring-music.mp3');
 const music=fs.readFileSync(musicPath);
@@ -12,13 +12,13 @@ const js=webJs.replaceAll('./assets/pouring-music.mp3',`data:audio/mpeg;base64,$
 if(js===webJs)throw new Error('配乐未正确打包');
 const license=fs.readFileSync(path.join(root,'vendor/THREE-LICENSE.txt'),'utf8').trim();
 const musicLicense=fs.readFileSync(path.join(root,'assets/MUSIC-LICENSE.txt'),'utf8').trim();
-const renderHtml=script=>fs.readFileSync(path.join(root,'index.html'),'utf8').replace('<link rel="stylesheet" href="./style.css" />',()=>`<style>${css}</style>`).replace('<link rel="stylesheet" href="./folk.css" />','').replace(/\s*<script type="importmap">.*?<\/script>/s,'').replace('<script type="module" src="./src/main.js"></script>',()=>`<script>${script}</script>`).replace('</head>',()=>`<!--\nThird-party notice (Three.js):\n${license}\n\nMusic provenance:\n${musicLicense}\n-->\n</head>`);
+const renderHtml=script=>fs.readFileSync(path.join(root,'index.html'),'utf8').replace('<link rel="stylesheet" href="./style.css" />',()=>`<style>${css}</style>`).replace('<link rel="stylesheet" href="./folk.css" />','').replace('<link rel="stylesheet" href="./studio-theme.css" />','').replace(/\s*<script type="importmap">.*?<\/script>/s,'').replace('<script type="module" src="./src/main.js"></script>',()=>`<script>${script}</script>`).replace('</head>',()=>`<!--\nThird-party notice (Three.js):\n${license}\n\nMusic provenance:\n${musicLicense}\n-->\n</head>`);
 const uiNames=fs.readdirSync(path.join(root,'assets/ui')).filter(name=>name.endsWith('.png'));
 let html=renderHtml(js);
 // CSS custom properties have a token-size limit. Decode each offline raster
 // once into a short Blob URL rather than repeating large data URLs in CSS.
 const assetData=Object.fromEntries(uiNames.map(name=>[`./assets/ui/${name}`,fs.readFileSync(path.join(root,'assets/ui',name)).toString('base64')]));
-const offlineAssets=`(()=>{const data=${JSON.stringify(assetData)},urls={};for(const [path,value]of Object.entries(data)){const raw=atob(value),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);urls[path]=URL.createObjectURL(new Blob([bytes],{type:'image/png'}));}window.__sugarOfflineAssets=urls;for(const [key,name]of Object.entries({wood:'wood-table.png',paper:'paper-sheet.png',brush:'vermilion-brush.png'}))document.documentElement.style.setProperty('--asset-'+key,'url("'+urls['./assets/ui/'+name]+'")');})();`;
+const offlineAssets=`(()=>{const data=${JSON.stringify(assetData)},urls={};for(const [path,value]of Object.entries(data)){const raw=atob(value),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);urls[path]=URL.createObjectURL(new Blob([bytes],{type:'image/png'}));}window.__sugarOfflineAssets=urls;for(const [key,name]of Object.entries({wood:'wood-table.png',paper:'paper-sheet.png',brush:'vermilion-brush.png',grain:'rice-fiber.png'}))document.documentElement.style.setProperty('--asset-'+key,'url("'+urls['./assets/ui/'+name]+'")');})();`;
 html=html.replace('<style>',()=>`<script>${offlineAssets}</script><style>`);
 const target=path.join(root,'糖画铺.html');fs.writeFileSync(target,html);console.log(`已生成独立页面：${target} (${Math.round(Buffer.byteLength(html)/1024)} KB)`);
 // The hosted page stays small; its music is requested after interaction.

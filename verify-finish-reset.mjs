@@ -26,7 +26,7 @@ try {
   await page.locator('#scene-finish').click();
   // A failed archive must never consume the working painting.
   await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;window.restoreArchive=()=>IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.put=function(value,key){if(key==='gallery')throw new DOMException('Full','QuotaExceededError');return put.call(this,value,key);};});
-  await page.locator('#next-painting').click();await confirmFinishedSave(page);assert.equal((await state()).strokes,1);assert.equal((await state()).presentation.mode,'held');
+  await (await studioControl(page,'#next-painting')).click();await confirmFinishedSave(page);assert.equal((await state()).strokes,1);assert.equal((await state()).presentation.mode,'held');
   assert.equal(await page.locator('#next-painting').isEnabled(),true);await page.evaluate(()=>restoreArchive());
   await page.locator('#save-work-submit').click();await page.waitForFunction(()=>!sugarStudio.getState().presentation.mode&&sugarStudio.getState().strokes===0);
   await assertEmpty();assert.equal((await state()).presentation.displayed,1);
@@ -44,7 +44,8 @@ try {
   await page.locator('#scene-finish').click();await page.locator('#pin-current').click();await confirmFinishedSave(page);
   await page.waitForFunction(()=>sugarStudio.getState().presentation.mode==='rack'&&sugarStudio.getState().presentation.displayed===2);
   await (await studioControl(page,'#resume-drawing')).click();await assertEmpty();assert.match(await page.locator('#step-label').innerText(),/第 1 \/ /);
-  await page.locator('#draw-mode').click();assert.equal((await state()).strokes,1,'another board keeps its unfinished painting');
+  await page.locator('#draw-mode').click();await page.waitForFunction(()=>sugarStudio.getState().mode==='draw'&&!document.querySelector('#scene').inert);await assertEmpty();
+  await (await studioControl(page,'#restore-previous-draft')).click();await page.waitForFunction(()=>sugarStudio.getState().strokes===1&&!document.querySelector('#scene').inert);assert.equal((await state()).strokes,1,'another board keeps its unfinished painting for explicit recovery');
   await page.locator('#template-mode').click();await (await studioControl(page,'[data-index="2"]')).click();await assertEmpty();
   await page.reload();await page.waitForFunction(()=>window.sugarStudio);await page.locator('#template-mode').click();await (await studioControl(page,'[data-index="2"]')).click();await assertEmpty();
   await page.setViewportSize({width:320,height:844});await drawStroke();await page.locator('#scene-finish').click();
